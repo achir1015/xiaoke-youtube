@@ -14,14 +14,19 @@ ROOT = Path(SPECPATH).parent          # noqa: F821  （SPECPATH 由 PyInstaller 
 datas = [
     (str(ROOT / "web"), "web"),
     (str(ROOT / "server" / "server.py"), "server"),
+    (str(ROOT / "server" / "stt.py"), "server"),
     (str(ROOT / "version.json"), "."),
 ]
 binaries = []
 hiddenimports = ["waitress", "flask", "jinja2", "werkzeug"]
 
-# yt-dlp 的解析器是動態載入的，要整包收進來
-for pkg in ("yt_dlp",):
-    pkg_datas, pkg_binaries, pkg_hidden = collect_all(pkg)
+# yt-dlp 的解析器與語音辨識套件都是動態載入的，要整包收進來
+for pkg in ("yt_dlp", "faster_whisper", "ctranslate2", "opencc", "av", "tokenizers"):
+    try:
+        pkg_datas, pkg_binaries, pkg_hidden = collect_all(pkg)
+    except Exception:
+        print("[小柯] 略過沒安裝的套件：%s" % pkg)
+        continue
     datas += pkg_datas
     binaries += pkg_binaries
     hiddenimports += pkg_hidden
@@ -39,7 +44,7 @@ a = Analysis(
     hiddenimports=hiddenimports,
     hookspath=[],
     runtime_hooks=[],
-    excludes=["tkinter", "matplotlib", "numpy", "pytest"],
+    excludes=["tkinter", "matplotlib", "pytest"],
     noarchive=False,
 )
 pyz = PYZ(a.pure)

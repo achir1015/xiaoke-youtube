@@ -12,6 +12,8 @@ MP4／MP3、自選解析度、支援播放清單、附下載進度條的 YouTube
 - 貼上網址即可解析影片或**播放清單**（可逐部勾選、全選／反選）
 - 選 **MP4 影片** 或 **MP3 音樂**（MP3 自動嵌入封面與曲目資訊）
 - MP4 可選解析度：360p／480p／720p／1080p／1440p／2160p（依該影片實際可用的畫質動態列出，優先選 H.264 以求相容性）
+- **語音轉文字 SRT 字幕**：在本機辨識語音產生字幕，可選繁體中文、簡體中文、英文、越南語、
+  日語、韓語、印尼語，也可以自動偵測；可以單獨只要字幕，或下載影片／音樂時順便產生
 - 總進度條 + 單部影片進度條，顯示速度與剩餘時間，可中途取消
 - 下載完成後可直接存到瀏覽器所在的裝置，檔案同時留在後端的下載資料夾
 - 網址列小圖示、可「建立捷徑／加到主畫面」當成 App 使用（PWA）
@@ -65,15 +67,19 @@ python server.py          # 預設 http://0.0.0.0:8787
 | --- | --- | --- |
 | `GET` | `/api/health` | 健康檢查、yt-dlp 版本、下載資料夾 |
 | `POST` | `/api/info` | `{url}` → 影片／播放清單資訊與可用解析度 |
-| `POST` | `/api/jobs` | `{url, mode:"mp4"\|"mp3", quality, items:[1,3,5], title}` → `job_id` |
+| `POST` | `/api/jobs` | `{url, mode:"mp4"\|"mp3"\|"srt", quality, items:[1,3,5], title, want_srt, srt_lang, srt_model}` → `job_id` |
 | `GET` | `/api/jobs/<id>` | 進度、階段、速度、剩餘時間、完成檔案 |
 | `POST` | `/api/jobs/<id>/cancel` | 取消下載 |
 | `GET` | `/api/files/<id>/<n>` | 把下載好的檔案傳給瀏覽器 |
+| `GET` | `/api/stt` | 語音辨識是否可用、支援語言、模型清單 |
+| `POST` | `/api/stt/install` | 在這台後端上安裝語音辨識套件 |
+| `GET`／`POST` | `/api/settings` | 讀取或切換下載資料夾 |
 
 ## 專案結構
 
 ```
 server/server.py        後端服務（單檔 Flask + yt-dlp）
+server/stt.py           語音轉文字 → SRT（faster-whisper + OpenCC 繁簡轉換）
 web/                    網頁介面（可單獨部署為靜態網站）
 extension/              YouTube 常駐下載小圖示（Chrome／Edge 擴充功能）
 desktop/                Windows 11 桌面版（pywebview + PyInstaller + Inno Setup）
@@ -81,6 +87,22 @@ tools/make_icons.py     產生 favicon／捷徑圖示／擴充功能圖示
 version.json            發行版本號（改這裡並推上 main 就會自動發 Release）
 啟動小柯YouTube下載工具.bat  Windows 一鍵啟動（不打包的輕量用法）
 ```
+
+## 語音轉文字字幕（SRT）
+
+用 [faster-whisper](https://github.com/SYSTRAN/faster-whisper) 在**你自己的後端**上辨識，
+影片不會送到任何外部服務；中文再用 OpenCC 轉換，確保「繁體」真的是繁體（連「軟件→軟體」
+這類用語都會轉）。
+
+- 支援語言：自動偵測、繁體中文、簡體中文、英文、越南語、日語、韓語、印尼語
+- 模型：tiny（75 MB）／base（145 MB）／small（484 MB，預設）／medium（1.5 GB），
+  第一次使用該模型會自動下載，存在 `%LOCALAPPDATA%\xiaoke-youtube\whisper`
+- 用法：檔案格式選「SRT 字幕」只產生字幕；或選 MP4／MP3 時勾「同時產生字幕」，
+  字幕會存成跟影片同名的 `.srt`
+- 桌面版已內建；網頁版／自架後端可在設定裡按一下「安裝語音辨識」，
+  或自己執行 `pip install -r server/requirements-stt.txt`
+
+> 辨識在 CPU 上跑，速度大約是影片長度的三分之一到一倍（看模型大小與機器）。
 
 ## Windows 11 桌面版
 

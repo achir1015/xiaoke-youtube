@@ -14,6 +14,9 @@
     scope: "single",   // single | playlist
     mode: "mp4",
     quality: 1080,
+    stt: null,
+    srtLang: "zh-TW",
+    srtModel: null,
     jobId: null,
     base: null,
     timer: null,
@@ -105,6 +108,11 @@
     "color:#94a3b8;font-size:12px;font-weight:700;cursor:pointer}",
     ".sb:hover{color:#e8edf4}",
     ".sb.on{background:#ff3b30;border-color:#ff3b30;color:#fff}",
+    "select{width:100%;padding:7px 8px;border-radius:9px;background:#0f141c;color:#e8edf4;",
+    "border:1px solid #2a3342;font-size:12px;font-family:inherit;margin-top:6px}",
+    ".chk{display:flex;align-items:center;gap:6px;font-size:11.5px;color:#94a3b8;cursor:pointer}",
+    ".chk input{accent-color:#ff3b30;width:15px;height:15px}",
+    "[hidden]{display:none !important}",
     ".go{width:100%;margin-top:14px;padding:11px;border-radius:10px;border:0;background:#ff3b30;color:#fff;",
     "font-size:14px;font-weight:800;cursor:pointer}",
     ".go:hover{filter:brightness(1.1)}",
@@ -151,8 +159,14 @@
       '<label class="lbl">下載範圍</label><div class="seg" id="scope"></div>' +
       '<label class="lbl">檔案格式</label><div class="seg" id="mode">' +
       '<button class="sb on" data-v="mp4">MP4 影片</button>' +
-      '<button class="sb" data-v="mp3">MP3 音樂</button></div>' +
+      '<button class="sb" data-v="mp3">MP3 音樂</button>' +
+      '<button class="sb" data-v="srt">SRT 字幕</button></div>' +
       '<label class="lbl" id="qlbl">解析度</label><div class="seg" id="quality"></div>' +
+      '<div id="srtbox" hidden><label class="lbl" id="srtlbl">語音轉文字字幕</label>' +
+      '<label class="chk" id="srttogglewrap"><input type="checkbox" id="srton"> 同時產生字幕</label>' +
+      '<div id="srtopts" hidden><select id="srtlang"></select>' +
+      '<select id="srtmodel"></select></div>' +
+      '<p class="msg" id="srtmsg" hidden></p></div>' +
       '<button class="go" id="go">開始下載</button>' +
       '<div class="bar" id="bar"><div class="fill" id="fill"></div></div>' +
       '<p class="msg" id="msg"></p><ul class="links" id="links"></ul>' +
@@ -160,7 +174,8 @@
       '<button id="opt">平台設定</button></div>';
     root.appendChild(panel);
 
-    ["ttl", "target", "scope", "mode", "quality", "qlbl", "go", "bar", "fill", "msg", "links", "full", "opt"]
+    ["ttl", "target", "scope", "mode", "quality", "qlbl", "go", "bar", "fill", "msg", "links",
+     "full", "opt", "srtbox", "srttogglewrap", "srton", "srtopts", "srtlang", "srtmodel", "srtmsg"]
       .forEach(function (id) { els[id] = root.getElementById(id); });
 
     panel.querySelector(".x").addEventListener("click", function () { setOpen(false); });
@@ -170,10 +185,15 @@
       var b = e.target.closest(".sb"); if (!b) return;
       S.mode = b.dataset.v;
       paint(els.mode, S.mode);
-      var video = S.mode === "mp4";
-      els.quality.style.display = video ? "" : "none";
-      els.qlbl.style.display = video ? "" : "none";
+      applyMode();
       save();
+    });
+    els.srton.addEventListener("change", applyMode);
+    els.srtlang.addEventListener("change", function () {
+      S.srtLang = els.srtlang.value; save();
+    });
+    els.srtmodel.addEventListener("change", function () {
+      S.srtModel = els.srtmodel.value; save();
     });
     els.quality.addEventListener("click", function (e) {
       var b = e.target.closest(".sb"); if (!b) return;
@@ -191,6 +211,7 @@
       S.base = els.target.value;
       chrome.storage.sync.set({ activeId: els.target.selectedOptions[0].dataset.id });
       els.full.href = S.base + "/";
+      loadStt();
       loadInfo();
     });
 
@@ -211,13 +232,19 @@
   function setOpen(on) {
     S.open = on;
     panel.classList.toggle("show", on);
-    if (on) loadInfo();
+    if (on) {
+      loadStt();
+      loadInfo();
+    }
   }
 
   function togglePanel() { setOpen(!S.open); }
 
   function save() {
-    chrome.storage.sync.set({ mode: S.mode, quality: S.quality });
+    chrome.storage.sync.set({
+      mode: S.mode, quality: S.quality,
+      srtLang: S.srtLang, srtModel: S.srtModel, srtOn: els.srton.checked
+    });
   }
 
   /* ---------------------------------------------------- 載入 */
@@ -257,6 +284,47 @@
     paint(els.quality, String(S.quality));
   }
 
+  function wantSrt() {
+    return S.mode === "srt" || els.srton.checked;
+  }
+
+  function applyMode() {
+    var video = S.mode === "mp4";
+    var srtOnly = S.mode === "srt";
+    els.quality.hidden = !video;
+    els.qlbl.hidden = !video;
+    els.srttogglewrap.hidden = srtOnly;
+    els.srtopts.hidden = !(S.stt && S.stt.available && wantSrt());
+    els.go.textContent = srtOnly ? "開始產生字幕" : "開始下載";
+    if (S.stt && !S.stt.available) {
+      els.srtmsg.hidden = false;
+      els.srtmsg.textContent = "這個平台還沒安裝語音辨識，請到完整介面安裝。";
+      els.srtmsg.className = "msg err";
+    } else {
+      els.srtmsg.hidden = true;
+    }
+  }
+
+  function loadStt() {
+    return send({ type: "stt", base: S.base }).then(function (d) {
+      S.stt = d;
+      els.srtbox.hidden = false;
+      els.srtlang.innerHTML = d.languages.map(function (l) {
+        return '<option value="' + l.code + '"' +
+          (l.code === S.srtLang ? " selected" : "") + ">" + l.name + "</option>";
+      }).join("");
+      S.srtModel = S.srtModel || d.default_model;
+      els.srtmodel.innerHTML = d.models.map(function (m) {
+        return '<option value="' + m.code + '"' +
+          (m.code === S.srtModel ? " selected" : "") + ">" + m.name + "</option>";
+      }).join("");
+      applyMode();
+    }).catch(function () {
+      // 後端比較舊、沒有這個功能就不顯示
+      els.srtbox.hidden = true;
+    });
+  }
+
   function loadInfo() {
     if (!S.base) return;
     fillScope();
@@ -292,6 +360,11 @@
     };
     if (S.info.type === "playlist") {
       body.items = (S.info.entries || []).map(function (e) { return e.index; });
+    }
+    if (wantSrt()) {
+      body.want_srt = true;
+      body.srt_lang = els.srtlang.value;
+      body.srt_model = els.srtmodel.value;
     }
     els.go.disabled = true;
     els.links.innerHTML = "";
@@ -370,7 +443,12 @@
     S.settings = s;
     S.mode = s.mode || "mp4";
     S.quality = s.quality || 1080;
+    S.srtLang = s.srtLang || "zh-TW";
+    S.srtModel = s.srtModel || "";
     build();
+    els.srton.checked = !!s.srtOn;
+    paint(els.mode, S.mode);
+    applyMode();
     fillTargets();
     refreshVisible();
     watchNavigation();

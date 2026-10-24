@@ -11,7 +11,10 @@ function getSettings() {
     targets: DEFAULT_TARGETS,
     activeId: "local",
     mode: "mp4",
-    quality: 1080
+    quality: 1080,
+    srtLang: "zh-TW",
+    srtModel: "",
+    srtOn: false
   });
 }
 
@@ -38,6 +41,7 @@ async function call(base, path, body) {
 var HANDLERS = {
   health: function (m) { return call(m.base, "/api/health"); },
   info: function (m) { return call(m.base, "/api/info", { url: m.url }); },
+  stt: function (m) { return call(m.base, "/api/stt"); },
   start: function (m) { return call(m.base, "/api/jobs", m.body); },
   poll: function (m) { return call(m.base, "/api/jobs/" + m.jobId); },
   cancel: function (m) { return call(m.base, "/api/jobs/" + m.jobId + "/cancel", {}); },

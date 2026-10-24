@@ -18,7 +18,7 @@ $version = (Get-Content "$root\version.json" -Raw -Encoding UTF8 | ConvertFrom-J
 Write-Host "[小柯] 建置版本 $version"
 
 Write-Host "[小柯] 安裝相依套件..."
-python -m pip install --quiet --disable-pip-version-check -r server\requirements.txt pywebview pyinstaller
+python -m pip install --quiet --disable-pip-version-check -r server\requirements.txt -r server\requirements-stt.txt pywebview pyinstaller
 
 if ($WithFfmpeg) {
   $ffdir = "$root\ffmpeg"

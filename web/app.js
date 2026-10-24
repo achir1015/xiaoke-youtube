@@ -11,7 +11,10 @@
   var apiBase = servedByBackend ? location.origin
     : (localStorage.getItem(LS_KEY) || DEFAULT_BASE);
 
-  var state = { info: null, mode: "mp4", quality: null, jobId: null, timer: null };
+  var state = {
+    info: null, mode: "mp4", quality: null, jobId: null, timer: null,
+    stt: null, installTimer: null
+  };
 
   /* ---------------------------------------------------------- 小工具 */
 
@@ -84,6 +87,7 @@
     say($("health"), "檢查中…", "busy");
     get("/api/health").then(function (d) {
       say($("health"), "已連線 · yt-dlp " + d.yt_dlp + " · 存到 " + d.folder, "ok");
+      loadStt();
     }).catch(function (e) {
       say($("health"), "連不上後端：" + e.message, "err");
     });
@@ -128,6 +132,7 @@
     $("media-sub").textContent = sub.join(" · ");
 
     renderQuality(d.resolutions || []);
+    applyMode();
     if (d.type === "playlist") {
       renderPlaylist(d.entries || []);
       show("playlist-block", true);
@@ -209,8 +214,90 @@
     $("mode-group").querySelectorAll(".seg-btn").forEach(function (x) { x.classList.remove("is-on"); });
     b.classList.add("is-on");
     state.mode = b.dataset.mode;
-    show("quality-block", state.mode === "mp4");
+    applyMode();
   });
+
+  function applyMode() {
+    var srtOnly = state.mode === "srt";
+    show("quality-block", state.mode === "mp4");
+    show("srt-toggle-wrap", !srtOnly);
+    $("btn-download").textContent = srtOnly ? "開始產生字幕" : "開始下載";
+    refreshSrtPanel();
+  }
+
+  /* ---------------------------------------------------------- 語音轉文字 */
+
+  function wantSrt() {
+    return state.mode === "srt" || $("srt-toggle").checked;
+  }
+
+  function refreshSrtPanel() {
+    var ready = state.stt && state.stt.available;
+    show("srt-install", !ready);
+    show("srt-opts", !!ready && wantSrt());
+    if (ready) updateSrtHint();
+  }
+
+  function updateSrtHint() {
+    var model = $("srt-model").value;
+    var got = (state.stt.downloaded || []).indexOf(model) >= 0;
+    $("srt-hint").textContent = got
+      ? "辨識在這台後端上跑，不會把影片送到外部服務。"
+      : "第一次使用這個模型會先下載模型檔，請耐心等候。";
+  }
+
+  function loadStt() {
+    return get("/api/stt").then(function (d) {
+      state.stt = d;
+      var lang = $("srt-lang");
+      if (!lang.options.length) {
+        d.languages.forEach(function (l) {
+          var o = document.createElement("option");
+          o.value = l.code; o.textContent = l.name;
+          if (l.code === "zh-TW") o.selected = true;
+          lang.appendChild(o);
+        });
+        d.models.forEach(function (m) {
+          var o = document.createElement("option");
+          o.value = m.code; o.textContent = m.name;
+          if (m.code === d.default_model) o.selected = true;
+          $("srt-model").appendChild(o);
+        });
+      }
+      refreshSrtPanel();
+      return d;
+    }).catch(function () { /* 後端還沒連上時先不顯示 */ });
+  }
+
+  $("srt-toggle").addEventListener("change", refreshSrtPanel);
+  $("srt-model").addEventListener("change", updateSrtHint);
+
+  $("btn-install-stt").addEventListener("click", function () {
+    $("btn-install-stt").disabled = true;
+    say($("srt-install-msg"), "開始安裝，請稍候（約需幾分鐘）…", "busy");
+    post("/api/stt/install").then(function () {
+      state.installTimer = setInterval(pollInstall, 2000);
+    }).catch(function (e) {
+      say($("srt-install-msg"), e.message, "err");
+      $("btn-install-stt").disabled = false;
+    });
+  });
+
+  function pollInstall() {
+    get("/api/stt").then(function (d) {
+      state.stt = d;
+      var ins = d.install || {};
+      if (d.available || ins.status === "done") {
+        clearInterval(state.installTimer);
+        say($("srt-install-msg"), "安裝完成，可以產生字幕了", "ok");
+        loadStt();
+      } else if (ins.status === "error") {
+        clearInterval(state.installTimer);
+        say($("srt-install-msg"), "安裝失敗：" + ins.error, "err");
+        $("btn-install-stt").disabled = false;
+      }
+    }).catch(function () {});
+  }
 
   /* ---------------------------------------------------------- 下載 */
 
@@ -222,6 +309,11 @@
       quality: state.mode === "mp4" ? state.quality : null,
       title: state.info.title
     };
+    if (wantSrt()) {
+      body.want_srt = true;
+      body.srt_lang = $("srt-lang").value;
+      body.srt_model = $("srt-model").value;
+    }
     if (state.info.type === "playlist") {
       var sel = boxes().filter(function (c) { return c.checked; })
         .map(function (c) { return parseInt(c.value, 10); });
@@ -402,6 +494,7 @@
   /* 開頁先確認後端是否活著，沒活就把設定打開 */
   get("/api/health").then(function (d) {
     say($("health"), "已連線 · yt-dlp " + d.yt_dlp, "ok");
+    loadStt();
   }).catch(function () {
     show("panel-settings", true);
     say($("health"), "還沒連上後端，請確認後端已啟動或填入網址", "err");

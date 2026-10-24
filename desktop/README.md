@@ -22,7 +22,7 @@ powershell -ExecutionPolicy Bypass -File desktop\build.ps1
 
 輸出：
 
-- `dist\XiaokeYouTube\XiaokeYouTube.exe`（免安裝版，約 60 MB；含 ffmpeg 約 160 MB）
+- `dist\XiaokeYouTube\XiaokeYouTube.exe`（免安裝版，約 290 MB；含 ffmpeg 約 390 MB）
 - `dist\XiaokeYouTube-Setup-v<版本>.exe`（安裝檔，會建立開始功能表與桌面捷徑）
 
 ## 桌面版多了什麼
@@ -35,6 +35,8 @@ powershell -ExecutionPolicy Bypass -File desktop\build.ps1
 
 另外：
 
+- **語音轉文字已內建**，不必另外安裝；第一次用某個辨識模型時會自動下載模型檔，
+  存在 `%LOCALAPPDATA%\xiaoke-youtube\whisper`
 - 後端只綁 `127.0.0.1`，不對外開放
 - 8787 被佔用時會自動換一個可用的埠號，不會跟已經在跑的命令列版打架
 - 會優先使用放在程式旁邊 `ffmpeg\` 的 ffmpeg，找不到才用系統 PATH 上的

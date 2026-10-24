@@ -81,6 +81,28 @@
       <div class="seg" id="mode-group">
         <button class="seg-btn is-on" data-mode="mp4">MP4 影片</button>
         <button class="seg-btn" data-mode="mp3">MP3 音樂</button>
+        <button class="seg-btn" data-mode="srt">SRT 字幕</button>
+      </div>
+    </div>
+
+    <div class="opt-block" id="srt-block">
+      <div class="opt-head">
+        <span class="opt-label">語音轉文字字幕（SRT）</span>
+        <label class="chk" id="srt-toggle-wrap">
+          <input type="checkbox" id="srt-toggle"> 同時產生字幕
+        </label>
+      </div>
+      <div id="srt-opts" hidden>
+        <div class="srt-row">
+          <label class="mini-field"><span>語音語言</span><select id="srt-lang"></select></label>
+          <label class="mini-field"><span>辨識模型</span><select id="srt-model"></select></label>
+        </div>
+        <p class="hint" id="srt-hint"></p>
+      </div>
+      <div id="srt-install" hidden>
+        <p class="hint">語音轉文字需要先安裝辨識套件（faster-whisper，約 200 MB）。</p>
+        <button class="btn btn-ghost" id="btn-install-stt">安裝語音辨識</button>
+        <p class="status" id="srt-install-msg"></p>
       </div>
     </div>
 

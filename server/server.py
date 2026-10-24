@@ -23,6 +23,8 @@ from flask import Flask, request, jsonify, send_file, send_from_directory
 
 import yt_dlp
 
+import stt
+
 HERE = Path(__file__).resolve().parent
 WEB_DIR = HERE.parent / "web"
 PORT = int(os.environ.get("XK_PORT", "8787"))
@@ -175,7 +177,7 @@ def api_info():
 # ---------------------------------------------------------------- 下載
 
 def build_format(mode, quality):
-    if mode == "mp3":
+    if mode in ("mp3", "srt"):
         return "bestaudio/best"
     if quality in (None, "", "best"):
         return "bv*+ba/b"
@@ -213,6 +215,11 @@ def make_job(payload):
         "speed": None,
         "eta": None,
         "stage": "準備中",
+        "want_srt": bool(payload.get("want_srt")),
+        "srt_lang": payload.get("srt_lang") or "auto",
+        "srt_model": payload.get("srt_model") or stt.DEFAULT_MODEL,
+        "srt_done": 0,
+        "srt_frac": 0.0,
         "files": [],
         "error": None,
         "cancel": False,
@@ -225,7 +232,11 @@ def make_job(payload):
 
 def recalc(job):
     frac = (job["done_items"] + min(job["item_percent"], 100) / 100.0) / job["total"]
-    job["percent"] = round(min(frac, 1.0) * 100, 1)
+    frac = min(frac, 1.0)
+    if job["want_srt"]:
+        # 下載與字幕各算一半，進度條才不會下載完就卡在 100%
+        frac = frac * 0.5 + min(job["srt_frac"], 1.0) * 0.5
+    job["percent"] = round(frac * 100, 1)
 
 
 def collect_files(job, info):
@@ -249,6 +260,50 @@ def collect_files(job, info):
             take(e)
     else:
         take(info)
+
+
+def make_subtitles(job):
+    """把下載好的檔案逐個做語音轉文字，產生同名的 .srt。"""
+    media = [f for f in job["files"] if not f["name"].lower().endswith(".srt")]
+    if not media:
+        return
+    if not stt.available():
+        raise RuntimeError("還沒安裝語音辨識套件，請到設定按「安裝語音辨識」")
+
+    total = len(media)
+    if not stt.model_ready(job["srt_model"]):
+        job["stage"] = "下載語音模型（第一次比較久）"
+
+    made = []
+    for i, f in enumerate(media):
+        if job["cancel"]:
+            raise Cancelled()
+        job["stage"] = "產生字幕 %d/%d" % (i + 1, total)
+        job["current_title"] = f["name"]
+
+        def on_progress(frac, index=i):
+            job["srt_frac"] = (index + frac) / total
+            recalc(job)
+
+        path = stt.transcribe(
+            f["path"], job["srt_lang"], job["srt_model"],
+            on_progress=on_progress, should_cancel=lambda: job["cancel"])
+        made.append({"name": os.path.basename(path), "path": path,
+                     "size": os.path.getsize(path)})
+        job["srt_done"] = i + 1
+        job["srt_frac"] = (i + 1) / total
+        recalc(job)
+
+    if job["mode"] == "srt":
+        # 只要字幕的話，暫存的音訊檔就不留了
+        for f in media:
+            try:
+                os.remove(f["path"])
+            except OSError:
+                pass
+        job["files"] = made
+    else:
+        job["files"].extend(made)
 
 
 def run_job(job, playlist_items, nums=None):
@@ -319,7 +374,10 @@ def run_job(job, playlist_items, nums=None):
         "ignoreerrors": "only_download" if is_playlist else False,
         "writethumbnail": job["mode"] == "mp3",
     })
-    if job["mode"] == "mp3":
+    if job["mode"] == "srt":
+        # 只要字幕：抓原始音訊就好，不用轉檔，辨識完會把音訊刪掉
+        opts["postprocessors"] = []
+    elif job["mode"] == "mp3":
         opts["postprocessors"] = [
             {"key": "FFmpegExtractAudio", "preferredcodec": "mp3", "preferredquality": "192"},
             {"key": "FFmpegMetadata"},
@@ -339,10 +397,15 @@ def run_job(job, playlist_items, nums=None):
             raise RuntimeError("下載完成但找不到檔案")
         job["done_items"] = job["total"]
         job["item_percent"] = 100.0
+        recalc(job)
+
+        if job["want_srt"]:
+            make_subtitles(job)
+
         job["percent"] = 100.0
         job["stage"] = "完成"
         job["status"] = "done"
-    except Cancelled:
+    except (Cancelled, stt.Cancelled):
         job["status"] = "canceled"
         job["stage"] = "已取消"
     except Exception as e:
@@ -360,8 +423,12 @@ def api_create_job():
     except ValueError as e:
         return jsonify(ok=False, error=str(e)), 400
     mode = data.get("mode") or "mp4"
-    if mode not in ("mp4", "mp3"):
-        return jsonify(ok=False, error="格式只能是 mp4 或 mp3"), 400
+    if mode not in ("mp4", "mp3", "srt"):
+        return jsonify(ok=False, error="格式只能是 mp4、mp3 或 srt"), 400
+
+    want_srt = bool(data.get("want_srt")) or mode == "srt"
+    if want_srt and not stt.available():
+        return jsonify(ok=False, error="還沒安裝語音辨識套件，請到設定按「安裝語音辨識」"), 400
 
     items = data.get("items")
     playlist_items = None
@@ -375,6 +442,9 @@ def api_create_job():
     job = make_job({
         "url": url, "mode": mode, "quality": data.get("quality"),
         "title": data.get("title"), "total": total,
+        "want_srt": want_srt,
+        "srt_lang": data.get("srt_lang"),
+        "srt_model": data.get("srt_model"),
     })
     threading.Thread(target=run_job, args=(job, playlist_items, nums if playlist_items else None),
                      daemon=True).start()
@@ -422,6 +492,54 @@ def api_file(job_id, idx):
     if not os.path.exists(f["path"]):
         return jsonify(ok=False, error="檔案已被移動或刪除"), 404
     return send_file(f["path"], as_attachment=True, download_name=f["name"])
+
+
+INSTALL = {"status": "idle", "message": "", "error": None}
+
+
+@app.get("/api/stt")
+def api_stt_status():
+    ready = stt.available()
+    return jsonify(
+        ok=True,
+        available=ready,
+        languages=[{"code": x["code"], "name": x["name"]} for x in stt.LANGUAGES],
+        models=stt.MODELS,
+        default_model=stt.DEFAULT_MODEL,
+        downloaded=[m["code"] for m in stt.MODELS if ready and stt.model_ready(m["code"])],
+        install=INSTALL,
+        bundled=bool(getattr(sys, "frozen", False)),
+    )
+
+
+def run_install():
+    import subprocess
+    INSTALL.update(status="running", message="正在安裝語音辨識套件…", error=None)
+    try:
+        proc = subprocess.run(
+            [sys.executable, "-m", "pip", "install", "--disable-pip-version-check"]
+            + stt.install_command(),
+            capture_output=True, text=True, timeout=1800)
+        if proc.returncode != 0:
+            tail = (proc.stderr or proc.stdout or "").strip().splitlines()
+            raise RuntimeError(tail[-1] if tail else "pip 安裝失敗")
+        if not stt.available():
+            raise RuntimeError("安裝完成但還是載入不了，請重新啟動服務")
+        INSTALL.update(status="done", message="安裝完成，可以產生字幕了")
+    except Exception as e:
+        INSTALL.update(status="error", message="", error=short_err(e))
+
+
+@app.post("/api/stt/install")
+def api_stt_install():
+    if stt.available():
+        return jsonify(ok=True, install={"status": "done", "message": "已經安裝好了", "error": None})
+    if getattr(sys, "frozen", False):
+        return jsonify(ok=False, error="桌面版已內建語音辨識，不需要另外安裝"), 400
+    if INSTALL["status"] == "running":
+        return jsonify(ok=True, install=INSTALL)
+    threading.Thread(target=run_install, daemon=True).start()
+    return jsonify(ok=True, install=INSTALL)
 
 
 @app.route("/api/settings", methods=["GET", "POST"])
