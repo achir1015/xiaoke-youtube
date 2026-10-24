@@ -1,0 +1,12 @@
+[Desktop Entry]
+Type=Application
+Name=小柯機器人 YouTube 下載工具
+GenericName=YouTube Downloader
+Comment=MP4／MP3、自選解析度、支援播放清單、語音轉文字字幕
+Exec=__EXEC__
+Icon=xiaoke-youtube
+Terminal=false
+Categories=AudioVideo;Audio;Video;Network;
+Keywords=youtube;download;mp4;mp3;subtitle;srt;
+StartupNotify=true
+StartupWMClass=XiaokeYouTube

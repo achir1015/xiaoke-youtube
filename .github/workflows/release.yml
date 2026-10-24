@@ -13,6 +13,8 @@ permissions:
 jobs:
   windows:
     runs-on: windows-latest
+    outputs:
+      version: ${{ steps.ver.outputs.version }}
     steps:
       - uses: actions/checkout@v4
 
@@ -68,3 +70,32 @@ jobs:
           files: |
             dist/XiaokeYouTube-Setup-v${{ steps.ver.outputs.version }}.exe
             dist/XiaokeYouTube-portable-v${{ steps.ver.outputs.version }}.zip
+
+  linux:
+    needs: windows          # 兩個 job 都往同一個 tag 丟檔案，排隊避免打架
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 安裝 Qt WebEngine 需要的系統套件
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            libnss3 libxkbcommon-x11-0 libxcb-cursor0 libxcomposite1 \
+            libxdamage1 libxrandr2 libegl1
+          # Ubuntu 24.04 叫 libasound2t64，22.04 叫 libasound2
+          sudo apt-get install -y --no-install-recommends libasound2t64 \
+            || sudo apt-get install -y --no-install-recommends libasound2
+
+      - name: 建置
+        run: bash desktop/build-linux.sh --with-ffmpeg
+
+      - name: 發行 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.windows.outputs.version }}
+          files: dist/XiaokeYouTube-linux-x86_64-v${{ needs.windows.outputs.version }}.tar.gz

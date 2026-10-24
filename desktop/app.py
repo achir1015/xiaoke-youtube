@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""小柯機器人 YouTube 下載工具 - Windows 11 桌面版
+"""小柯機器人 YouTube 下載工具 - 桌面版（Windows／Linux／macOS）
 
 把後端服務包進一個原生視窗：打開就能用，不需要命令列；關掉視窗就停止所有執行。
 """
@@ -7,9 +7,13 @@ import os
 import sys
 import json
 import socket
+import subprocess
 import threading
 import urllib.request
 from pathlib import Path
+
+IS_WINDOWS = os.name == "nt"
+IS_MAC = sys.platform == "darwin"
 
 APP_VERSION = "1.0.0"
 APP_NAME = "小柯機器人 YouTube 下載工具"
@@ -29,8 +33,9 @@ BASE = base_path()
 
 def setup_ffmpeg():
     """優先用放在程式旁邊的 ffmpeg，找不到就靠系統 PATH。"""
+    name = "ffmpeg.exe" if IS_WINDOWS else "ffmpeg"
     for folder in (BASE / "ffmpeg", BASE, Path(sys.executable).parent / "ffmpeg"):
-        if (folder / "ffmpeg.exe").exists():
+        if (folder / name).exists():
             os.environ["XK_FFMPEG_DIR"] = str(folder)
             os.environ["PATH"] = str(folder) + os.pathsep + os.environ.get("PATH", "")
             return str(folder)
@@ -49,6 +54,10 @@ def free_port(preferred=8787):
             s.close()
     return preferred
 
+
+if getattr(sys, "frozen", False) and not IS_WINDOWS and not IS_MAC:
+    # 打包版在 Linux 上帶的是 Qt 後端，指定清楚才不會去找系統的 GTK
+    os.environ.setdefault("PYWEBVIEW_GUI", "qt")
 
 setup_ffmpeg()
 PORT = free_port()
@@ -77,9 +86,14 @@ class Api:
         target = Path(path or backend.DOWNLOAD_DIR)
         try:
             target.mkdir(parents=True, exist_ok=True)
-            os.startfile(str(target))      # noqa: S606  （Windows 原生開資料夾）
+            if IS_WINDOWS:
+                os.startfile(str(target))                       # noqa: S606
+            elif IS_MAC:
+                subprocess.Popen(["open", str(target)])
+            else:
+                subprocess.Popen(["xdg-open", str(target)])
             return {"ok": True}
-        except OSError as e:
+        except (OSError, subprocess.SubprocessError) as e:
             return {"ok": False, "error": str(e)}
 
     def pick_folder(self):
@@ -142,7 +156,16 @@ def main():
     )
     window.events.closed += lambda: os._exit(0)   # 關閉視窗＝停止所有執行
 
-    webview.start()
+    # Linux／macOS 的視窗圖示要另外指定，Windows 是用 exe 自己的圖示
+    icon = BASE / "web" / "icon-512.png"
+    try:
+        if not IS_WINDOWS and icon.exists():
+            webview.start(icon=str(icon))
+        else:
+            webview.start()
+    except TypeError:
+        # 舊版 pywebview 不吃 icon 參數
+        webview.start()
     os._exit(0)
 
 

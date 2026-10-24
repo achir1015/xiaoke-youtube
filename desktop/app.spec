@@ -6,6 +6,7 @@
 輸出：
     dist/XiaokeYouTube/XiaokeYouTube.exe
 """
+import sys
 from pathlib import Path
 from PyInstaller.utils.hooks import collect_all
 
@@ -59,7 +60,8 @@ exe = EXE(
     strip=False,
     upx=False,
     console=False,
-    icon=str(ROOT / "web" / "favicon.ico"),
+    # Linux 不吃 .ico，視窗圖示改由程式啟動時指定
+    icon=str(ROOT / "web" / "favicon.ico") if sys.platform == "win32" else None,
 )
 
 coll = COLLECT(

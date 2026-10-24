@@ -4,8 +4,8 @@ MP4／MP3、自選解析度、支援播放清單、附下載進度條的 YouTube
 由 [yt-dlp](https://github.com/yt-dlp/yt-dlp) + ffmpeg 驅動。
 
 > 目前完成：**線上版（網頁介面 + 本機／自架後端）**、**YouTube 常駐下載小圖示（瀏覽器擴充功能）**、
-> **Windows 11 桌面版**
-> 規劃中：macOS、Linux 桌面版，Android、iPhone。
+> **Windows 11 桌面版**、**Linux 桌面版**
+> 規劃中：macOS 桌面版，Android、iPhone。
 
 ## 功能
 
@@ -82,7 +82,7 @@ server/server.py        後端服務（單檔 Flask + yt-dlp）
 server/stt.py           語音轉文字 → SRT（faster-whisper + OpenCC 繁簡轉換）
 web/                    網頁介面（可單獨部署為靜態網站）
 extension/              YouTube 常駐下載小圖示（Chrome／Edge 擴充功能）
-desktop/                Windows 11 桌面版（pywebview + PyInstaller + Inno Setup）
+desktop/                桌面版（pywebview + PyInstaller；Windows 用 Inno Setup，Linux 出 tar.gz）
 tools/make_icons.py     產生 favicon／捷徑圖示／擴充功能圖示
 version.json            發行版本號（改這裡並推上 main 就會自動發 Release）
 啟動小柯YouTube下載工具.bat  Windows 一鍵啟動（不打包的輕量用法）
@@ -104,11 +104,15 @@ version.json            發行版本號（改這裡並推上 main 就會自動�
 
 > 辨識在 CPU 上跑，速度大約是影片長度的三分之一到一倍（看模型大小與機器）。
 
-## Windows 11 桌面版
+## 桌面版（Windows 11／Linux）
 
 `desktop/` 把後端包進一個原生視窗：打開就能用、不用命令列、關掉視窗就停止所有執行，
-並多了「開啟／變更下載資料夾」與「檢查更新」。建置與發行方式見
-[desktop/README.md](desktop/README.md)。
+並多了「開啟／變更下載資料夾」與「檢查更新」，語音辨識也直接內建。
+
+- Windows：安裝檔（開始功能表＋桌面捷徑）或免安裝 zip
+- Linux：`tar.gz` 解壓後執行 `./install.sh`，會進應用程式選單
+
+建置與發行方式見 [desktop/README.md](desktop/README.md)。
 
 ## YouTube 常駐下載小圖示
 

@@ -1,4 +1,4 @@
-# 小柯機器人 YouTube 下載工具 — Windows 11 桌面版
+# 小柯機器人 YouTube 下載工具 — 桌面版（Windows 11／Linux）
 
 把後端服務包進一個原生視窗：**打開就能用，不用命令列；關掉視窗就停止所有執行**。
 
@@ -9,7 +9,33 @@ pip install -r server/requirements.txt pywebview
 python desktop/app.py
 ```
 
-## 建置成 exe
+## Linux
+
+**安裝**：從 Release 下載 `XiaokeYouTube-linux-x86_64-v<版本>.tar.gz`，解壓後：
+
+```bash
+tar -xzf XiaokeYouTube-linux-x86_64-v1.0.0.tar.gz
+cd XiaokeYouTube
+./install.sh            # 裝到 ~/.local，不需要 root
+```
+
+裝完會出現在應用程式選單，終端機也可以直接打 `xiaoke-youtube`。
+`sudo ./install.sh -g` 可以裝到 `/opt` 給全系統用，`./install.sh -u` 移除。
+
+**自己建置**：
+
+```bash
+bash desktop/build-linux.sh --with-ffmpeg
+```
+
+Linux 版用 Qt 當視窗後端（`pywebview[qt]`），執行時需要這些系統函式庫，
+多數桌面發行版已內建，缺的話：
+
+```bash
+sudo apt install libnss3 libxkbcommon-x11-0 libxcb-cursor0 libegl1 ffmpeg
+```
+
+## 建置成 exe（Windows）
 
 ```powershell
 powershell -ExecutionPolicy Bypass -File desktop\build.ps1
