@@ -8,7 +8,9 @@
 from pathlib import Path
 from PIL import Image, ImageDraw
 
-WEB = Path(__file__).resolve().parent.parent / "web"
+ROOT = Path(__file__).resolve().parent.parent
+WEB = ROOT / "web"
+EXT_ICONS = ROOT / "extension" / "icons"
 S = 1024  # 先畫大圖再縮，邊緣才漂亮
 
 
@@ -78,7 +80,13 @@ def main():
 
     base.resize((256, 256), Image.LANCZOS).save(
         WEB / "favicon.ico", sizes=[(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (256, 256)])
-    print("圖示已輸出到", WEB)
+
+    # 瀏覽器擴充功能用的圖示
+    EXT_ICONS.mkdir(parents=True, exist_ok=True)
+    for size in (16, 32, 48, 128):
+        base.resize((size, size), Image.LANCZOS).save(EXT_ICONS / ("icon-%d.png" % size))
+
+    print("圖示已輸出到", WEB, "與", EXT_ICONS)
 
 
 if __name__ == "__main__":

@@ -1,0 +1,42 @@
+{
+  "manifest_version": 3,
+  "name": "小柯機器人 YouTube 下載小圖示",
+  "version": "1.0.0",
+  "description": "在 YouTube 頁面常駐一個小柯機器人下載圖示，一鍵把影片或播放清單分派到你指定的下載平台。",
+  "permissions": ["storage", "notifications"],
+  "host_permissions": ["http://*/*", "https://*/*"],
+  "background": { "service_worker": "background.js" },
+  "content_scripts": [
+    {
+      "matches": [
+        "https://www.youtube.com/*",
+        "https://m.youtube.com/*",
+        "https://music.youtube.com/*"
+      ],
+      "js": ["content.js"],
+      "run_at": "document_idle"
+    }
+  ],
+  "action": {
+    "default_title": "小柯機器人 YouTube 下載工具",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon-16.png",
+      "32": "icons/icon-32.png",
+      "48": "icons/icon-48.png",
+      "128": "icons/icon-128.png"
+    }
+  },
+  "icons": {
+    "16": "icons/icon-16.png",
+    "32": "icons/icon-32.png",
+    "48": "icons/icon-48.png",
+    "128": "icons/icon-128.png"
+  },
+  "web_accessible_resources": [
+    {
+      "resources": ["icons/icon-128.png", "icons/icon-48.png"],
+      "matches": ["https://*.youtube.com/*"]
+    }
+  ]
+}

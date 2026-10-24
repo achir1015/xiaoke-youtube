@@ -3,8 +3,8 @@
 MP4／MP3、自選解析度、支援播放清單、附下載進度條的 YouTube 下載工具。
 由 [yt-dlp](https://github.com/yt-dlp/yt-dlp) + ffmpeg 驅動。
 
-> 目前完成：**線上版（網頁介面 + 本機／自架後端）**
-> 規劃中：Windows 11、macOS、Android、iPhone、Linux 桌面版，以及 YouTube 頁面上的常駐下載小圖示。
+> 目前完成：**線上版（網頁介面 + 本機／自架後端）**、**YouTube 常駐下載小圖示（瀏覽器擴充功能）**
+> 規劃中：Windows 11、macOS、Android、iPhone、Linux 桌面版。
 
 ## 功能
 
@@ -74,9 +74,16 @@ python server.py          # 預設 http://0.0.0.0:8787
 ```
 server/server.py        後端服務（單檔 Flask + yt-dlp）
 web/                    網頁介面（可單獨部署為靜態網站）
-tools/make_icons.py     產生 favicon／捷徑圖示
+extension/              YouTube 常駐下載小圖示（Chrome／Edge 擴充功能）
+tools/make_icons.py     產生 favicon／捷徑圖示／擴充功能圖示
 啟動小柯YouTube下載工具.bat  Windows 一鍵啟動
 ```
+
+## YouTube 常駐下載小圖示
+
+`extension/` 是一個 Manifest V3 擴充功能：在 YouTube 影片頁與播放清單頁右下角常駐一個
+小柯機器人圖示，點開可以選格式、解析度、下載範圍，並**分派到你設定的任一下載平台**
+（這台電腦、NAS、工作電腦……）。安裝與使用方式見 [extension/README.md](extension/README.md)。
 
 ## 注意
 
