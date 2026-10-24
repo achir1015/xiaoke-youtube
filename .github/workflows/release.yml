@@ -115,17 +115,33 @@ jobs:
         with:
           gradle-version: "8.11.1"
 
+      # 正式發行一定要用固定金鑰簽：用 debug 簽章發出去的 APK，裝了的人之後就再也無法更新。
+      # 所以缺任何一個 secret、或金鑰解不開，都直接讓這一步失敗，而不是默默退回 debug 簽章。
       - name: 準備簽章金鑰
         id: sign
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          STORE_PW: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PW: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: |
-          if [ -n "$KEYSTORE_B64" ]; then
-            echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/xiaoke.jks"
-            echo "keystore=$RUNNER_TEMP/xiaoke.jks" >> "$GITHUB_OUTPUT"
-          else
-            echo "沒有設定 ANDROID_KEYSTORE_BASE64，這版 APK 會用 debug 簽章"
+          missing=""
+          [ -n "$KEYSTORE_B64" ] || missing="$missing ANDROID_KEYSTORE_BASE64"
+          [ -n "$STORE_PW" ]     || missing="$missing ANDROID_KEYSTORE_PASSWORD"
+          [ -n "$KEY_ALIAS" ]    || missing="$missing ANDROID_KEY_ALIAS"
+          [ -n "$KEY_PW" ]       || missing="$missing ANDROID_KEY_PASSWORD"
+          if [ -n "$missing" ]; then
+            echo "::error::缺少這些 repository secrets：$missing（請到 Settings → Secrets and variables → Actions → Repository secrets 設定）"
+            exit 1
           fi
+          # 貼上時常會夾帶換行或空白，先清掉再解碼
+          printf '%s' "$KEYSTORE_B64" | tr -d ' \r\n\t' | base64 -d > "$RUNNER_TEMP/xiaoke.jks" || {
+            echo "::error::ANDROID_KEYSTORE_BASE64 不是有效的 base64，可能複製時少了一段"; exit 1; }
+          echo "金鑰檔大小：$(stat -c %s "$RUNNER_TEMP/xiaoke.jks") bytes"
+          keytool -list -keystore "$RUNNER_TEMP/xiaoke.jks" -storetype PKCS12 \
+            -storepass "$STORE_PW" -alias "$KEY_ALIAS" > /dev/null || {
+            echo "::error::金鑰打不開：ANDROID_KEYSTORE_PASSWORD 或 ANDROID_KEY_ALIAS 不對"; exit 1; }
+          echo "keystore=$RUNNER_TEMP/xiaoke.jks" >> "$GITHUB_OUTPUT"
 
       - name: 編譯 release APK
         working-directory: android
@@ -135,6 +151,15 @@ jobs:
           XK_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
           XK_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
         run: gradle assembleRelease --no-daemon --stacktrace
+
+      - name: 確認 APK 是正式簽章
+        run: |
+          APKSIGNER="$(ls -d "$ANDROID_HOME"/build-tools/*/ | sort -V | tail -1)apksigner"
+          certs="$("$APKSIGNER" verify --print-certs android/app/build/outputs/apk/release/*.apk)"
+          echo "$certs" | grep -E "DN:|SHA-256 digest"
+          if echo "$certs" | grep -q "CN=Android Debug"; then
+            echo "::error::APK 是 debug 簽章，不能發行"; exit 1
+          fi
 
       - name: 改成好認的檔名
         run: |
