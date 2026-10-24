@@ -35,6 +35,9 @@
   <section class="card" id="panel-settings" hidden>
     <h2>後端服務</h2>
     <p class="hint">YouTube 影片必須由後端（本機或自架伺服器）實際下載，網頁本身無法直接抓檔。</p>
+    <p class="hint">從 https 的線上版連本機後端：Chrome、Edge 可以直接用；Firefox 會擋，
+      請改開後端自己提供的頁面 <code>http://127.0.0.1:8787/</code>。手機要用的話，
+      後端需要有 https 網址。</p>
     <label class="field">
       <span>後端網址</span>
       <input type="text" id="api-base" placeholder="http://127.0.0.1:8787" spellcheck="false">
