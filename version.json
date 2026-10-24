@@ -1,5 +1,5 @@
 {
-  "version": "1.0.1",
-  "notes": "補上 Android APK；Windows 安裝檔改成不需要系統管理員權限（不跳 UAC）",
+  "version": "1.0.2",
+  "notes": "補上 Android APK；Windows 安裝檔不需要系統管理員權限（不跳 UAC）",
   "page": "https://github.com/achir1015/xiaoke-youtube/releases/latest"
 }

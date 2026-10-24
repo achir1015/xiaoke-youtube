@@ -13,8 +13,10 @@ val versionNumber: Int = versionText.split(".").let { parts ->
     at(0) * 10000 + at(1) * 100 + at(2)
 }
 
-// 有提供金鑰就用正式簽章，沒有就用 debug 簽章（本機自己玩夠用）
+// 有提供金鑰就用正式簽章，沒有就用 debug 簽章（本機自己玩夠用）。
+// CI 沒設 secret 時這個變數會是「空字串」而不是不存在，所以空白也要當成沒設。
 val keystorePath: String? = System.getenv("XK_KEYSTORE")
+    ?.takeIf { it.isNotBlank() && file(it).isFile }
 
 android {
     namespace = "com.xiaoke.youtube"
