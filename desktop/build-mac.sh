@@ -69,13 +69,20 @@ if [ ! -x ffmpeg/ffmpeg ]; then
   # 「最新版」捷徑網址只對 ffmpeg.zip 有效（ffprobe 會 404），
   # 所以先解析出 ffmpeg 實際所在的版本目錄，再從同一個目錄抓兩個，版本也一定一致
   # 注意：這個網站對 HEAD 請求不穩定（常回 404），要用 GET 並只讀轉址目標、不跟過去
-  LOC="$(curl -fsS -o /dev/null -w '%{redirect_url}' \
-    "https://ffmpeg.martin-riedl.de/redirect/latest/macos/${ARCH}/release/ffmpeg.zip")"
+  # 這個下載站時好時壞，解析不到就重試幾次
+  LOC=""
+  for attempt in 1 2 3 4 5; do
+    LOC="$(curl -fsS -o /dev/null -w '%{redirect_url}' \
+      "https://ffmpeg.martin-riedl.de/redirect/latest/macos/${ARCH}/release/ffmpeg.zip" || true)"
+    [ -n "$LOC" ] && break
+    echo "[小柯] 第 $attempt 次解析 ffmpeg 下載位置失敗，5 秒後重試"
+    sleep 5
+  done
   [ -n "$LOC" ] || { echo "找不到 ffmpeg 最新版的下載位置（下載站回應：$(curl -s -o /dev/null -w '%{http_code}' "https://ffmpeg.martin-riedl.de/redirect/latest/macos/${ARCH}/release/ffmpeg.zip")）"; exit 1; }
   FF_DIR="${LOC%/ffmpeg.zip}"
   echo "[小柯] ffmpeg 版本目錄：$FF_DIR"
   for tool in ffmpeg ffprobe; do
-    curl -fsSL -o "$tmp/$tool.zip" "$FF_DIR/$tool.zip"
+    curl -fsSL --retry 5 --retry-delay 5 --retry-all-errors -o "$tmp/$tool.zip" "$FF_DIR/$tool.zip"
     unzip -o -q "$tmp/$tool.zip" -d "$tmp/$tool"
     find "$tmp/$tool" -type f -name "$tool" -exec cp {} ffmpeg/ \;
   done
