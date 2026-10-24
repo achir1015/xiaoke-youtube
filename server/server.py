@@ -25,6 +25,7 @@ from flask import Flask, request, jsonify, send_file, send_from_directory
 import yt_dlp
 
 import stt
+import mt
 
 HERE = Path(__file__).resolve().parent
 WEB_DIR = HERE.parent / "web"
@@ -221,6 +222,8 @@ def make_job(payload):
         "srt_model": payload.get("srt_model") or stt.DEFAULT_MODEL,
         "srt_done": 0,
         "srt_frac": 0.0,
+        "srt_translate": payload.get("srt_translate") or None,
+        "srt_bilingual": bool(payload.get("srt_bilingual")),
         "files": [],
         "error": None,
         "cancel": False,
@@ -271,9 +274,19 @@ def make_subtitles(job):
     if not stt.available():
         raise RuntimeError("還沒安裝語音辨識套件，請到設定按「安裝語音辨識」")
 
+    target = job["srt_translate"]
+    # 原文語言跟翻譯語言一樣就不用翻
+    if target and target == job["srt_lang"]:
+        target = None
+    if target and not mt.available():
+        raise RuntimeError("還沒安裝翻譯套件（sentencepiece），請重新安裝語音辨識")
+
     total = len(media)
     if not stt.model_ready(job["srt_model"]):
         job["stage"] = "下載語音模型（第一次比較久）"
+
+    # 有翻譯時，每個檔案的進度：語音辨識佔 60%、翻譯佔 40%
+    w_stt = 0.6 if target else 1.0
 
     made = []
     for i, f in enumerate(media):
@@ -282,15 +295,32 @@ def make_subtitles(job):
         job["stage"] = "產生字幕 %d/%d" % (i + 1, total)
         job["current_title"] = f["name"]
 
-        def on_progress(frac, index=i):
-            job["srt_frac"] = (index + frac) / total
+        def on_stt(frac, index=i):
+            job["srt_frac"] = (index + frac * w_stt) / total
             recalc(job)
 
         path = stt.transcribe(
             f["path"], job["srt_lang"], job["srt_model"],
-            on_progress=on_progress, should_cancel=lambda: job["cancel"])
+            on_progress=on_stt, should_cancel=lambda: job["cancel"])
         made.append({"name": os.path.basename(path), "path": path,
                      "size": os.path.getsize(path)})
+
+        if target:
+            name = mt.target(target)["name"]
+            job["stage"] = ("下載翻譯模型（%s，第一次比較久）" % mt.MODEL_SIZE_TEXT
+                            if not mt.model_ready() else "翻譯成%s %d/%d" % (name, i + 1, total))
+
+            def on_mt(frac, index=i):
+                if job["stage"].startswith("下載翻譯模型"):
+                    job["stage"] = "翻譯成%s %d/%d" % (name, index + 1, total)
+                job["srt_frac"] = (index + w_stt + frac * (1 - w_stt)) / total
+                recalc(job)
+
+            out = mt.translate_srt(path, target, bilingual=job["srt_bilingual"],
+                                   on_progress=on_mt, should_cancel=lambda: job["cancel"])
+            made.append({"name": os.path.basename(out), "path": out,
+                         "size": os.path.getsize(out)})
+
         job["srt_done"] = i + 1
         job["srt_frac"] = (i + 1) / total
         recalc(job)
@@ -406,7 +436,7 @@ def run_job(job, playlist_items, nums=None):
         job["percent"] = 100.0
         job["stage"] = "完成"
         job["status"] = "done"
-    except (Cancelled, stt.Cancelled):
+    except (Cancelled, stt.Cancelled, mt.Cancelled):
         job["status"] = "canceled"
         job["stage"] = "已取消"
     except Exception as e:
@@ -446,6 +476,8 @@ def api_create_job():
         "want_srt": want_srt,
         "srt_lang": data.get("srt_lang"),
         "srt_model": data.get("srt_model"),
+        "srt_translate": data.get("srt_translate"),
+        "srt_bilingual": data.get("srt_bilingual"),
     })
     threading.Thread(target=run_job, args=(job, playlist_items, nums if playlist_items else None),
                      daemon=True).start()
@@ -508,6 +540,12 @@ def api_stt_status():
         models=stt.MODELS,
         default_model=stt.DEFAULT_MODEL,
         downloaded=[m["code"] for m in stt.MODELS if ready and stt.model_ready(m["code"])],
+        translate={
+            "available": mt.available(),
+            "ready": mt.model_ready(),
+            "size": mt.MODEL_SIZE_TEXT,
+            "targets": [{"code": t["code"], "name": t["name"]} for t in mt.TARGETS],
+        },
         install=INSTALL,
         bundled=bool(getattr(sys, "frozen", False)),
     )

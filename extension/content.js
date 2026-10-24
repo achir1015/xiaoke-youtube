@@ -165,7 +165,10 @@
       '<div id="srtbox" hidden><label class="lbl" id="srtlbl">語音轉文字字幕</label>' +
       '<label class="chk" id="srttogglewrap"><input type="checkbox" id="srton"> 同時產生字幕</label>' +
       '<div id="srtopts" hidden><select id="srtlang"></select>' +
-      '<select id="srtmodel"></select></div>' +
+      '<select id="srtmodel"></select>' +
+      '<select id="srttr" hidden></select>' +
+      '<label class="chk" id="srtbiwrap" hidden><input type="checkbox" id="srtbi"> 雙語字幕（原文＋譯文）</label>' +
+      '</div>' +
       '<p class="msg" id="srtmsg" hidden></p></div>' +
       '<button class="go" id="go">開始下載</button>' +
       '<div class="bar" id="bar"><div class="fill" id="fill"></div></div>' +
@@ -175,7 +178,8 @@
     root.appendChild(panel);
 
     ["ttl", "target", "scope", "mode", "quality", "qlbl", "go", "bar", "fill", "msg", "links",
-     "full", "opt", "srtbox", "srttogglewrap", "srton", "srtopts", "srtlang", "srtmodel", "srtmsg"]
+     "full", "opt", "srtbox", "srttogglewrap", "srton", "srtopts", "srtlang", "srtmodel", "srtmsg",
+     "srttr", "srtbiwrap", "srtbi"]
       .forEach(function (id) { els[id] = root.getElementById(id); });
 
     panel.querySelector(".x").addEventListener("click", function () { setOpen(false); });
@@ -191,6 +195,9 @@
     els.srton.addEventListener("change", applyMode);
     els.srtlang.addEventListener("change", function () {
       S.srtLang = els.srtlang.value; save();
+    });
+    els.srttr.addEventListener("change", function () {
+      els.srtbiwrap.hidden = !els.srttr.value;
     });
     els.srtmodel.addEventListener("change", function () {
       S.srtModel = els.srtmodel.value; save();
@@ -318,6 +325,12 @@
         return '<option value="' + m.code + '"' +
           (m.code === S.srtModel ? " selected" : "") + ">" + m.name + "</option>";
       }).join("");
+      var mt = d.translate || {};
+      els.srttr.hidden = !mt.available;
+      els.srttr.innerHTML = '<option value="">不翻譯</option>' + (mt.targets || []).map(function (t) {
+        return '<option value="' + t.code + '">翻譯成 ' + t.name + "（另存一個 SRT）</option>";
+      }).join("");
+      els.srtbiwrap.hidden = true;
       applyMode();
     }).catch(function () {
       // 後端比較舊、沒有這個功能就不顯示
@@ -365,6 +378,10 @@
       body.want_srt = true;
       body.srt_lang = els.srtlang.value;
       body.srt_model = els.srtmodel.value;
+      if (els.srttr.value) {
+        body.srt_translate = els.srttr.value;
+        body.srt_bilingual = els.srtbi.checked;
+      }
     }
     els.go.disabled = true;
     els.links.innerHTML = "";

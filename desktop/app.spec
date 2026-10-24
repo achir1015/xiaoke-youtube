@@ -17,13 +17,15 @@ datas = [
     (str(ROOT / "web"), "web"),
     (str(ROOT / "server" / "server.py"), "server"),
     (str(ROOT / "server" / "stt.py"), "server"),
+    (str(ROOT / "server" / "mt.py"), "server"),
     (str(ROOT / "version.json"), "."),
 ]
 binaries = []
 hiddenimports = ["waitress", "flask", "jinja2", "werkzeug"]
 
 # yt-dlp 的解析器與語音辨識套件都是動態載入的，要整包收進來
-for pkg in ("yt_dlp", "faster_whisper", "ctranslate2", "opencc", "av", "tokenizers"):
+for pkg in ("yt_dlp", "faster_whisper", "ctranslate2", "opencc", "av", "tokenizers",
+            "sentencepiece"):
     try:
         pkg_datas, pkg_binaries, pkg_hidden = collect_all(pkg)
     except Exception:

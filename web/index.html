@@ -118,6 +118,12 @@
           <label class="mini-field"><span>語音語言</span><select id="srt-lang"></select></label>
           <label class="mini-field"><span>辨識模型</span><select id="srt-model"></select></label>
         </div>
+        <div class="srt-row" id="mt-row" hidden>
+          <label class="mini-field"><span>翻譯成（另外輸出一個 SRT）</span><select id="srt-translate"></select></label>
+          <label class="chk mt-bi" id="mt-bi-wrap" hidden>
+            <input type="checkbox" id="srt-bilingual"> 雙語字幕（原文＋譯文）
+          </label>
+        </div>
         <p class="hint" id="srt-hint"></p>
       </div>
       <div id="srt-install" hidden>

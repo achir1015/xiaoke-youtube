@@ -104,6 +104,8 @@ def _init_cache_env():
     os.environ.setdefault("HF_HOME", hf)
     os.environ.setdefault("HF_HUB_CACHE", os.path.join(hf, "hub"))
     os.environ.setdefault("HF_XET_CACHE", os.path.join(hf, "xet"))
+    # Windows 沒開開發人員模式不能建符號連結，HF 會一直跳警告；不影響運作
+    os.environ.setdefault("HF_HUB_DISABLE_SYMLINKS_WARNING", "1")
     os.environ.setdefault("XDG_CACHE_HOME", root)
 
 
@@ -210,26 +212,32 @@ def transcribe(media_path, lang_code="auto", model_size=DEFAULT_MODEL,
     total = float(getattr(info, "duration", 0) or 0)
 
     out = srt_path_for(media_path)
+    # 先寫暫存檔，完整成功才改名：中途出錯、取消或 App 被關掉時，
+    # 才不會留下一個空的或不完整的 .srt 冒充成功（使用者真的遇過 0 位元組的字幕檔）
+    part = out.with_name(out.name + ".part")
     count = 0
-    with open(out, "w", encoding="utf-8-sig", newline="\n") as f:
-        for seg in segments:
-            if should_cancel and should_cancel():
-                raise Cancelled()
-            text = clean(seg.text)
-            if not text:
-                continue
-            text = convert_text(text, lang["convert"])
-            count += 1
-            f.write("%d\n%s --> %s\n%s\n\n" % (
-                count, timestamp(seg.start), timestamp(seg.end), text))
-            if on_progress and total > 0:
-                on_progress(min(seg.end / total, 1.0))
+    try:
+        with open(part, "w", encoding="utf-8-sig", newline="\n") as f:
+            for seg in segments:
+                if should_cancel and should_cancel():
+                    raise Cancelled()
+                text = clean(seg.text)
+                if not text:
+                    continue
+                text = convert_text(text, lang["convert"])
+                count += 1
+                f.write("%d\n%s --> %s\n%s\n\n" % (
+                    count, timestamp(seg.start), timestamp(seg.end), text))
+                if on_progress and total > 0:
+                    on_progress(min(seg.end / total, 1.0))
+        if count == 0:
+            raise RuntimeError("這段影片裡沒有辨識到語音")
+        os.replace(part, out)
+    finally:
+        part.unlink(missing_ok=True)
 
     if on_progress:
         on_progress(1.0)
-    if count == 0:
-        out.unlink(missing_ok=True)
-        raise RuntimeError("這段影片裡沒有辨識到語音")
     return str(out)
 
 
@@ -240,4 +248,4 @@ def clean(text):
 
 
 def install_command():
-    return ["faster-whisper", "opencc-python-reimplemented"]
+    return ["faster-whisper", "opencc-python-reimplemented", "sentencepiece"]

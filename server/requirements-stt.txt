@@ -1,3 +1,4 @@
-# 語音轉文字（SRT 字幕）需要的套件；不裝也能正常下載影片與音樂
+# 語音轉文字（SRT 字幕）與字幕翻譯需要的套件；不裝也能正常下載影片與音樂
 faster-whisper>=1.1
 opencc-python-reimplemented>=0.1.7
+sentencepiece>=0.2

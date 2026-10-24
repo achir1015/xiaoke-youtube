@@ -388,9 +388,16 @@
   function updateSrtHint() {
     var model = $("srt-model").value;
     var got = (state.stt.downloaded || []).indexOf(model) >= 0;
-    $("srt-hint").textContent = got
-      ? "辨識在這台後端上跑，不會把影片送到外部服務。"
-      : "第一次使用這個模型會先下載模型檔，請耐心等候。";
+    var mt = state.stt.translate || {};
+    var tgt = $("srt-translate").value;
+    show("mt-bi-wrap", !!tgt);
+    var msg = got
+      ? "辨識與翻譯都在這台後端上跑，不會把影片或字幕送到外部服務。"
+      : "第一次使用這個辨識模型會先下載模型檔，請耐心等候。";
+    if (tgt && !mt.ready) {
+      msg += "第一次翻譯會先下載翻譯模型（" + (mt.size || "約 2.8 GB") + "），比較久。";
+    }
+    $("srt-hint").textContent = msg;
   }
 
   function loadStt() {
@@ -410,7 +417,16 @@
           if (m.code === d.default_model) o.selected = true;
           $("srt-model").appendChild(o);
         });
+        var mt = d.translate || {};
+        var sel = $("srt-translate");
+        sel.innerHTML = '<option value="">不翻譯</option>';
+        (mt.targets || []).forEach(function (t) {
+          var o = document.createElement("option");
+          o.value = t.code; o.textContent = t.name;
+          sel.appendChild(o);
+        });
       }
+      show("mt-row", !!(d.translate && d.translate.available));
       refreshSrtPanel();
       return d;
     }).catch(function () { /* 後端還沒連上時先不顯示 */ });
@@ -418,6 +434,7 @@
 
   $("srt-toggle").addEventListener("change", refreshSrtPanel);
   $("srt-model").addEventListener("change", updateSrtHint);
+  $("srt-translate").addEventListener("change", updateSrtHint);
 
   $("btn-install-stt").addEventListener("click", function () {
     $("btn-install-stt").disabled = true;
@@ -460,6 +477,10 @@
       body.want_srt = true;
       body.srt_lang = $("srt-lang").value;
       body.srt_model = $("srt-model").value;
+      if ($("srt-translate").value) {
+        body.srt_translate = $("srt-translate").value;
+        body.srt_bilingual = $("srt-bilingual").checked;
+      }
     }
     if (state.info.type === "playlist") {
       var sel = boxes().filter(function (c) { return c.checked; })
