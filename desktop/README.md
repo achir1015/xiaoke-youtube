@@ -1,8 +1,18 @@
 # 小柯機器人 YouTube 下載工具 — 桌面版（Windows 11／Linux）
 
-把後端服務包進一個原生視窗：**打開就能用，不用命令列；關掉視窗就停止所有執行**。
+把後端服務包進一個原生視窗：**點開就是一個獨立的應用程式**，不是瀏覽器分頁，
+使用者不必知道背後有服務在跑、也不用自己開任何網址；關掉視窗就停止所有執行。
 
-## 直接執行（開發用）
+打包版**不需要使用者先安裝 Python 或 ffmpeg**：
+
+| 元件 | 怎麼來的 |
+| --- | --- |
+| Python 直譯器 | PyInstaller 直接包進執行檔，使用者的電腦上完全不需要 Python |
+| ffmpeg／ffprobe | 建置時下載、放在程式旁邊，啟動時優先用自己這份，找不到才退回系統 PATH |
+| 語音辨識（faster-whisper） | 一起打包，只有辨識模型會在第一次使用時自動下載 |
+| flask／yt-dlp 等套件 | 一起打包 |
+
+## 直接執行（開發用，這條才需要自己裝 Python 與 ffmpeg）
 
 ```
 pip install -r server/requirements.txt pywebview
@@ -48,7 +58,8 @@ powershell -ExecutionPolicy Bypass -File desktop\build.ps1
 
 輸出：
 
-- `dist\XiaokeYouTube\XiaokeYouTube.exe`（免安裝版，約 290 MB；含 ffmpeg 約 390 MB）
+- `dist\XiaokeYouTube\XiaokeYouTube.exe`（免安裝版，約 290 MB；含 ffmpeg 約 490 MB，
+  安裝檔會壓縮過所以下載小很多）
 - `dist\XiaokeYouTube-Setup-v<版本>.exe`（安裝檔，會建立開始功能表與桌面捷徑）
 
 ## 桌面版多了什麼

@@ -1,4 +1,4 @@
-# 小柯機器人 YouTube 下載工具 - Windows 桌面版建置腳本
+﻿# 小柯機器人 YouTube 下載工具 - Windows 桌面版建置腳本
 # 用法（在專案根目錄）：  powershell -ExecutionPolicy Bypass -File desktop\build.ps1
 # 參數：
 #   -WithFfmpeg   一併下載 ffmpeg 打包進去（使用者就不必自己裝）

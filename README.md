@@ -25,15 +25,27 @@ MP4／MP3、自選解析度、支援播放清單、附下載進度條的 YouTube
 
 ## 快速開始（Windows）
 
-1. 先確認已安裝 Python 3.9+ 與 ffmpeg：
-   ```
-   winget install Python.Python.3.12
-   winget install Gyan.FFmpeg
-   ```
-2. 連點兩下 `啟動小柯YouTube下載工具.bat`
-   － 第一次會自動安裝 flask／yt-dlp／waitress
-   － 自動開啟 <http://127.0.0.1:8787/>
-   － 關掉那個黑色視窗，服務就停止
+到 [Releases](https://github.com/achir1015/xiaoke-youtube/releases/latest) 下載
+`XiaokeYouTube-Setup-v<版本>.exe`，安裝完就能用。
+
+**不需要先裝 Python，也不需要先裝 ffmpeg** —— 兩者（還有語音辨識）都已經包在裡面。
+裝完是一個獨立的應用程式：開始功能表與桌面都有捷徑，點開是一個原生視窗，
+不是瀏覽器分頁，也不用自己去開什麼網址。關掉視窗就停止所有執行。
+
+<details>
+<summary>進階：不想安裝，直接從原始碼跑</summary>
+
+這條路才需要自備 Python 3.9+ 與 ffmpeg：
+
+```
+winget install Python.Python.3.12
+winget install Gyan.FFmpeg
+```
+
+然後連點兩下 `啟動小柯YouTube下載工具.bat`，第一次會自動安裝 flask／yt-dlp／waitress，
+並開啟 <http://127.0.0.1:8787/>；關掉那個黑色視窗，服務就停止。
+
+</details>
 
 ## 手動啟動（macOS／Linux／NAS）
 
