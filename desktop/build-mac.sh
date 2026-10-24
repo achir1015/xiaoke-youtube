@@ -54,13 +54,21 @@ ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 
 ARCH="$(uname -m)"     # Apple 晶片是 arm64，Intel 是 x86_64
+# ffmpeg 下載站把 Intel Mac 叫做 amd64（不是系統回報的 x86_64）
+case "$ARCH" in x86_64) FF_ARCH=amd64 ;; *) FF_ARCH="$ARCH" ;; esac
 VERSION="$(python3 -c "import json;print(json.load(open('version.json',encoding='utf-8'))['version'])")"
 APP_NAME="小柯YT下載"
 stage "建置 macOS $ARCH 版本 $VERSION"
 
 stage "安裝相依套件"
 python3 -m pip install --quiet --disable-pip-version-check \
-  -r server/requirements.txt -r server/requirements-stt.txt pyinstaller pywebview
+  -r server/requirements.txt pyinstaller pywebview
+# 語音辨識另外裝：萬一這個處理器沒有現成的套件，App 其他功能照樣能建置，
+# 只是字幕功能會顯示「需要安裝」
+if ! python3 -m pip install --quiet --disable-pip-version-check -r server/requirements-stt.txt; then
+  echo "[小柯] 警告：語音辨識套件在 $ARCH 上裝不起來，這一版不含字幕功能"
+  if [ -n "${GITHUB_ACTIONS:-}" ]; then echo "::warning title=macOS $ARCH::語音辨識套件裝不起來，這一版不含字幕功能" >&3; fi
+fi
 
 if [ ! -x ffmpeg/ffmpeg ]; then
   stage "下載 ffmpeg"
@@ -73,12 +81,12 @@ if [ ! -x ffmpeg/ffmpeg ]; then
   LOC=""
   for attempt in 1 2 3 4 5; do
     LOC="$(curl -fsS -o /dev/null -w '%{redirect_url}' \
-      "https://ffmpeg.martin-riedl.de/redirect/latest/macos/${ARCH}/release/ffmpeg.zip" || true)"
+      "https://ffmpeg.martin-riedl.de/redirect/latest/macos/${FF_ARCH}/release/ffmpeg.zip" || true)"
     [ -n "$LOC" ] && break
     echo "[小柯] 第 $attempt 次解析 ffmpeg 下載位置失敗，5 秒後重試"
     sleep 5
   done
-  [ -n "$LOC" ] || { echo "找不到 ffmpeg 最新版的下載位置（下載站回應：$(curl -s -o /dev/null -w '%{http_code}' "https://ffmpeg.martin-riedl.de/redirect/latest/macos/${ARCH}/release/ffmpeg.zip")）"; exit 1; }
+  [ -n "$LOC" ] || { echo "找不到 ffmpeg 最新版的下載位置（下載站回應：$(curl -s -o /dev/null -w '%{http_code}' "https://ffmpeg.martin-riedl.de/redirect/latest/macos/${FF_ARCH}/release/ffmpeg.zip")）"; exit 1; }
   FF_DIR="${LOC%/ffmpeg.zip}"
   echo "[小柯] ffmpeg 版本目錄：$FF_DIR"
   for tool in ffmpeg ffprobe; do

@@ -102,7 +102,15 @@ jobs:
 
   mac:
     needs: windows          # 跟其他 job 丟同一個 tag，排在 Windows 建好 Release 之後
-    runs-on: macos-14       # Apple 晶片（arm64）
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - runner: macos-14          # Apple 晶片（arm64）
+            arch: arm64
+          - runner: macos-15-intel    # Intel（x86_64）
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
@@ -117,7 +125,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ needs.windows.outputs.version }}
-          files: dist/XiaokeYouTube-mac-arm64-v${{ needs.windows.outputs.version }}.dmg
+          files: dist/XiaokeYouTube-mac-${{ matrix.arch }}-v${{ needs.windows.outputs.version }}.dmg
 
   android:
     needs: [windows, linux]

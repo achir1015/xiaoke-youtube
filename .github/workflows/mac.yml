@@ -13,7 +13,15 @@ on:
 
 jobs:
   build:
-    runs-on: macos-14       # Apple 晶片（arm64）
+    strategy:
+      fail-fast: false      # 一台失敗不要拖累另一台
+      matrix:
+        include:
+          - runner: macos-14          # Apple 晶片（arm64）
+            arch: arm64
+          - runner: macos-15-intel    # Intel（x86_64）
+            arch: x86_64
+    runs-on: ${{ matrix.runner }}
     steps:
       - uses: actions/checkout@v4
 
@@ -27,6 +35,6 @@ jobs:
       - name: 保留 dmg
         uses: actions/upload-artifact@v4
         with:
-          name: XiaokeYouTube-mac-dmg
+          name: XiaokeYouTube-mac-${{ matrix.arch }}-dmg
           path: dist/*.dmg
           if-no-files-found: error
