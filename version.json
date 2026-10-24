@@ -1,5 +1,5 @@
 {
-  "version": "1.0.4",
+  "version": "1.0.5",
   "notes": "Android 版改用固定正式簽章，之後可直接覆蓋更新；套件名稱 com.achir.xiaokeyoutube",
   "page": "https://github.com/achir1015/xiaoke-youtube/releases/latest"
 }
