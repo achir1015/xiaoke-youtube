@@ -581,6 +581,21 @@ def api_stt_install():
     return jsonify(ok=True, install=INSTALL)
 
 
+@app.get("/api/logs")
+def api_logs():
+    """桌面版的執行記錄（最後 300 行）；which=prev 是上一次執行的，用來查閃退原因。"""
+    d = os.environ.get("XK_LOG_DIR")
+    if not d:
+        return jsonify(ok=False, error="這個版本沒有執行記錄（只有桌面版有）"), 404
+    name = "app.prev.log" if request.args.get("which") == "prev" else "app.log"
+    p = Path(d) / name
+    if not p.exists():
+        return jsonify(ok=True, name=name, lines=[])
+    with open(p, encoding="utf-8", errors="replace") as f:
+        lines = f.read().splitlines()[-300:]
+    return jsonify(ok=True, name=name, lines=lines)
+
+
 @app.route("/api/settings", methods=["GET", "POST"])
 def api_settings():
     if request.method == "POST":

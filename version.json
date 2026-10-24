@@ -1,5 +1,5 @@
 {
-  "version": "1.1.0",
-  "notes": "新增字幕翻譯（7 種語言、可輸出雙語字幕，輸出同樣是 SRT）；修正字幕產生失敗時留下空檔案",
+  "version": "1.1.1",
+  "notes": "修正 macOS／Linux 版產生字幕或翻譯時 App 閃退並重新開啟；新增執行記錄方便查錯",
   "page": "https://github.com/achir1015/xiaoke-youtube/releases/latest"
 }

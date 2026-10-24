@@ -3,19 +3,78 @@
 
 把後端服務包進一個原生視窗：打開就能用，不需要命令列；關掉視窗就停止所有執行。
 """
+import multiprocessing
 import os
 import sys
-import json
-import socket
-import subprocess
-import threading
-import urllib.request
-from pathlib import Path
+
+# 打包後，任何套件用到 multiprocessing（例如進度條 tqdm 會建立多行程鎖，macOS／Linux
+# 因此啟動 resource_tracker 輔助行程），那個子行程都是用「這個 App 執行檔」去跑的。
+# 沒有 freeze_support()，子行程會把整個 App 再開一次——使用者看到的就是 App 跳掉又重開。
+# 這一行一定要在其他東西之前執行。
+if __name__ == "__main__":
+    multiprocessing.freeze_support()
+
+# 不要顯示 Hugging Face 的下載進度條：視窗程式看不到它，而且它正是會建立多行程鎖的元兇
+os.environ.setdefault("HF_HUB_DISABLE_PROGRESS_BARS", "1")
+os.environ.setdefault("TQDM_DISABLE", "1")
+# Intel Mac 上語音／翻譯引擎與其他套件各自帶了 OpenMP，同時載入會直接 abort 讓 App 閃退
+os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
+
+import json  # noqa: E402
+import faulthandler  # noqa: E402
+import socket  # noqa: E402
+import subprocess  # noqa: E402
+import threading  # noqa: E402
+import urllib.request  # noqa: E402
+from pathlib import Path  # noqa: E402
 
 IS_WINDOWS = os.name == "nt"
 IS_MAC = sys.platform == "darwin"
 
-APP_VERSION = "1.1.0"
+
+def log_dir():
+    if IS_MAC:
+        d = Path.home() / "Library" / "Logs" / "XiaokeYouTube"
+    elif IS_WINDOWS:
+        d = Path(os.environ.get("LOCALAPPDATA") or Path.home()) / "xiaoke-youtube" / "logs"
+    else:
+        d = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state") / "xiaoke-youtube"
+    d.mkdir(parents=True, exist_ok=True)
+    return d
+
+
+def setup_logging():
+    """視窗程式沒有主控台，輸出與當機訊息都寫進記錄檔；上一次的保留為 app.prev.log，
+    這樣 App 閃退重開後，還看得到上一次為什麼掛掉。"""
+    try:
+        d = log_dir()
+        cur, prev = d / "app.log", d / "app.prev.log"
+        if cur.exists():
+            os.replace(cur, prev)
+        f = open(cur, "a", encoding="utf-8", buffering=1)
+        if getattr(sys, "frozen", False) or sys.stdout is None:
+            sys.stdout = f
+            sys.stderr = f
+        faulthandler.enable(f)          # 連 C 層級的當機（segfault、abort）都留下 Python 堆疊
+        os.environ["XK_LOG_DIR"] = str(d)
+        print("===== 啟動 pid=%d argv=%s =====" % (os.getpid(), sys.argv), flush=True)
+    except OSError:
+        pass
+
+
+if __name__ == "__main__":
+    setup_logging()
+
+# tqdm 只要「建立」進度條（就算設成不顯示）就會建立 multiprocessing 鎖，
+# 在 macOS／Linux 打包版裡就會觸發上面說的「App 被再開一次」。
+# 這個 App 只有單一行程，先把它的多行程鎖設成「已存在（None）」，它就只會用執行緒鎖。
+try:
+    from tqdm.std import TqdmDefaultWriteLock
+    TqdmDefaultWriteLock.mp_lock = None
+except ImportError:
+    pass
+
+APP_VERSION = "1.1.1"
 APP_NAME = "小柯機器人 YouTube 下載工具"
 UPDATE_URL = "https://raw.githubusercontent.com/achir1015/xiaoke-youtube/main/version.json"
 RELEASE_PAGE = "https://github.com/achir1015/xiaoke-youtube/releases/latest"
