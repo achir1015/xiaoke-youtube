@@ -33,6 +33,18 @@ DOWNLOAD_DIR = Path(
 )
 DOWNLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
+# 桌面版會把 ffmpeg 放在程式旁邊；沒有的話就用系統 PATH 上的
+FFMPEG_DIR = os.environ.get("XK_FFMPEG_DIR") or None
+
+
+def set_download_dir(path):
+    """切換下載資料夾（桌面版設定用）。"""
+    global DOWNLOAD_DIR
+    p = Path(path).expanduser()
+    p.mkdir(parents=True, exist_ok=True)
+    DOWNLOAD_DIR = p
+    return DOWNLOAD_DIR
+
 QUALITY_LADDER = [360, 480, 720, 1080, 1440, 2160, 4320]
 
 app = Flask(__name__, static_folder=None)
@@ -59,7 +71,7 @@ def cors_preflight(_any):
 
 
 def base_opts():
-    return {
+    opts = {
         "quiet": True,
         "no_warnings": True,
         "noprogress": True,
@@ -68,6 +80,9 @@ def base_opts():
         "retries": 5,
         "fragment_retries": 5,
     }
+    if FFMPEG_DIR:
+        opts["ffmpeg_location"] = FFMPEG_DIR
+    return opts
 
 
 def clean_url(url):
@@ -407,6 +422,19 @@ def api_file(job_id, idx):
     if not os.path.exists(f["path"]):
         return jsonify(ok=False, error="檔案已被移動或刪除"), 404
     return send_file(f["path"], as_attachment=True, download_name=f["name"])
+
+
+@app.route("/api/settings", methods=["GET", "POST"])
+def api_settings():
+    if request.method == "POST":
+        path = (request.get_json(silent=True) or {}).get("download_dir")
+        if not path:
+            return jsonify(ok=False, error="請提供 download_dir"), 400
+        try:
+            set_download_dir(path)
+        except OSError as e:
+            return jsonify(ok=False, error="無法使用這個資料夾：" + short_err(e)), 400
+    return jsonify(ok=True, download_dir=str(DOWNLOAD_DIR))
 
 
 @app.get("/api/health")

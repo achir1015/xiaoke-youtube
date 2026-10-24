@@ -51,6 +51,8 @@ main { max-width: 880px; margin: 0 auto; padding: 0 16px 40px; }
 .card h2 { margin: 0 0 8px; font-size: 1rem; }
 .hint { color: var(--muted); font-size: .82rem; margin: 6px 0; word-break: break-all; }
 
+.sub { border-top: 1px solid var(--line); padding-top: 14px; margin-top: 16px; font-size: .9rem; }
+
 .field { display: block; }
 .field > span { display: block; font-size: .8rem; color: var(--muted); margin-bottom: 6px; }
 input[type=text] {

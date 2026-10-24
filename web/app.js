@@ -319,6 +319,59 @@
     $("url").focus();
   });
 
+  /* ---------------------------------------------------------- 桌面版專屬 */
+
+  function deskApi() {
+    return (window.pywebview && window.pywebview.api) || null;
+  }
+
+  function setupDesktop() {
+    var api = deskApi();
+    if (!api) return;
+    show("desktop-box", true);
+    Promise.all([api.version(), get("/api/settings")]).then(function (res) {
+      $("desk-folder").textContent =
+        "版本 " + res[0].version + "　·　下載到：" + res[1].download_dir;
+    }).catch(function () {});
+  }
+
+  $("btn-open-folder").addEventListener("click", function () {
+    var api = deskApi();
+    if (api) api.open_folder().then(function (r) {
+      if (!r.ok) say($("desk-msg"), r.error, "err");
+    });
+  });
+
+  $("btn-pick-folder").addEventListener("click", function () {
+    var api = deskApi();
+    if (!api) return;
+    api.pick_folder().then(function (r) {
+      if (r.canceled) return;
+      if (!r.ok) { say($("desk-msg"), r.error || "無法切換資料夾", "err"); return; }
+      say($("desk-msg"), "之後會下載到：" + r.download_dir, "ok");
+      checkHealth();
+    });
+  });
+
+  $("btn-update").addEventListener("click", function () {
+    var api = deskApi();
+    if (!api) return;
+    say($("desk-msg"), "檢查更新中…", "busy");
+    api.check_update().then(function (r) {
+      if (!r.ok) { say($("desk-msg"), "檢查失敗：" + r.error, "err"); return; }
+      if (r.newer) {
+        say($("desk-msg"), "有新版本 " + r.latest + "（目前 " + r.current + "）" +
+          (r.notes ? "：" + r.notes : "") + " — 正在開啟下載頁", "ok");
+        api.open_release_page();
+      } else {
+        say($("desk-msg"), "已經是最新版（" + r.current + "）", "ok");
+      }
+    });
+  });
+
+  window.addEventListener("pywebviewready", setupDesktop);
+  if (deskApi()) setupDesktop();
+
   /* ---------------------------------------------------------- 捷徑／PWA */
 
   if ("serviceWorker" in navigator && location.protocol !== "file:") {
