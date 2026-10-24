@@ -6,6 +6,14 @@
 
 set -euo pipefail
 
+# 在 CI 上失敗時，把最後 20 行輸出寫成錯誤註記：註記不用登入就看得到，log 則要登入
+if [ -n "${GITHUB_ACTIONS:-}" ]; then
+  LOG="$(mktemp)"
+  exec > >(tee "$LOG") 2>&1
+  trap 'rc=$?; sleep 1; msg="$(tail -n 20 "$LOG" | tr -d "\r" | sed -e "s/%/%25/g" | awk 1 ORS="%0A")";
+        echo "::error title=macOS 建置失敗（第 $LINENO 行：$BASH_COMMAND）::$msg"; exit $rc' ERR
+fi
+
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 cd "$ROOT"
 

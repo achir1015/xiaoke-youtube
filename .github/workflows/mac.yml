@@ -1,0 +1,32 @@
+name: 建置 macOS App
+
+# 動到 Mac 相關檔案就建一次，修 Mac 不用每次都升版號；dmg 留在執行結果的 artifact
+on:
+  push:
+    branches: [main]
+    paths:
+      - "desktop/build-mac.sh"
+      - "desktop/app.spec"
+      - "desktop/app.py"
+      - ".github/workflows/mac.yml"
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-14       # Apple 晶片（arm64）
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 建置 .dmg
+        run: bash desktop/build-mac.sh
+
+      - name: 保留 dmg
+        uses: actions/upload-artifact@v4
+        with:
+          name: XiaokeYouTube-mac-dmg
+          path: dist/*.dmg
+          if-no-files-found: error
