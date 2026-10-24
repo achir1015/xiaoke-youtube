@@ -1,5 +1,5 @@
 {
-  "version": "1.0.0",
-  "notes": "線上版、YouTube 常駐下載小圖示、Windows 11 與 Linux 桌面版、Android 版，支援 MP4／MP3、播放清單與語音轉文字 SRT 字幕",
+  "version": "1.0.1",
+  "notes": "補上 Android APK；Windows 安裝檔改成不需要系統管理員權限（不跳 UAC）",
   "page": "https://github.com/achir1015/xiaoke-youtube/releases/latest"
 }
