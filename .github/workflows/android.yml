@@ -20,7 +20,11 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      # 專案沒有 wrapper，不指定版本就會吃 runner 內建的 Gradle，
+      # 版本跟 AGP 對不上就會失敗，所以這裡釘死
       - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "8.11.1"
 
       - name: 編譯 debug APK
         working-directory: android
