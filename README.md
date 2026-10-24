@@ -5,8 +5,8 @@ MP4／MP3、自選解析度、支援播放清單、附下載進度條的 YouTube
 由 [yt-dlp](https://github.com/yt-dlp/yt-dlp) + ffmpeg 驅動。
 
 > 目前完成：**線上版（網頁介面 + 本機／自架後端）**、**YouTube 常駐下載小圖示（瀏覽器擴充功能）**、
-> **Windows 11 桌面版**、**Linux 桌面版**、**Android 版**
-> 規劃中：macOS 桌面版、iPhone。
+> **Windows 11 桌面版**、**macOS 桌面版**、**Linux 桌面版**、**Android 版**
+> 規劃中：iPhone。
 
 ## 功能
 
@@ -124,13 +124,16 @@ version.json            發行版本號（改這裡並推上 main 就會自動�
 手機當介面、下載交給你的後端（電腦或 NAS），所以手機不耗電也不佔空間；需要時再按
 「存到這台裝置」把檔案拉回手機。安裝與設定見 [android/README.md](android/README.md)。
 
-## 桌面版（Windows 11／Linux）
+## 桌面版（Windows 11／macOS／Linux）
 
 `desktop/` 把後端包進一個原生視窗：打開就能用、不用命令列、關掉視窗就停止所有執行，
 並多了「開啟／變更下載資料夾」與「檢查更新」，語音辨識也直接內建。
 
 - Windows：安裝檔（開始功能表＋桌面捷徑）或免安裝 zip
+- macOS（Apple 晶片）：下載 `.dmg`，打開後把「小柯YT下載」拖進「應用程式」
 - Linux：`tar.gz` 解壓後執行 `./install.sh`，會進應用程式選單
+
+桌面版會對區域網路開放，手機和電腦連同一個 Wi-Fi 時，Android App 會自動找到這台電腦。
 
 建置與發行方式見 [desktop/README.md](desktop/README.md)。
 

@@ -36,15 +36,33 @@
     <h2>後端服務</h2>
     <p class="hint">YouTube 影片必須由後端（本機或自架伺服器）實際下載，網頁本身無法直接抓檔。</p>
     <p class="hint">從 https 的線上版連本機後端：Chrome、Edge 可以直接用；Firefox 會擋，
-      請改開後端自己提供的頁面 <code>http://127.0.0.1:8787/</code>。手機要用的話，
-      後端需要有 https 網址。</p>
-    <label class="field">
-      <span>後端網址</span>
-      <input type="text" id="api-base" placeholder="http://127.0.0.1:8787" spellcheck="false">
-    </label>
-    <div class="row">
-      <button id="btn-test" class="btn btn-ghost">測試連線</button>
-      <span id="health" class="status"></span>
+      請改開後端自己提供的頁面 <code>http://127.0.0.1:8787/</code>。手機請改用 Android App。</p>
+
+    <div id="find-box">
+      <div class="row">
+        <button id="btn-find" class="btn btn-primary">自動尋找後端</button>
+        <span id="find-msg" class="status"></span>
+      </div>
+      <ul id="found-list" class="found-list"></ul>
+    </div>
+
+    <details class="manual" id="manual-box">
+      <summary>手動輸入網址</summary>
+      <label class="field">
+        <span>後端網址</span>
+        <input type="text" id="api-base" placeholder="http://127.0.0.1:8787" spellcheck="false">
+      </label>
+      <div class="row">
+        <button id="btn-test" class="btn btn-ghost">測試連線</button>
+      </div>
+    </details>
+    <p id="health" class="status"></p>
+
+    <div id="phone-box" hidden>
+      <h2 class="sub">手機連線</h2>
+      <p class="hint">手機和這台電腦連同一個 Wi-Fi，打開「小柯YT下載」App 就會自動找到這台電腦。
+        App 找不到時，可以手動輸入：</p>
+      <ul id="phone-urls" class="phone-urls"></ul>
     </div>
 
     <div id="desktop-box" hidden>

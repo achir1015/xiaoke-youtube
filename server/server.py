@@ -14,6 +14,7 @@ import os
 import re
 import sys
 import time
+import socket
 import uuid
 import threading
 import traceback
@@ -557,8 +558,72 @@ def api_settings():
 
 @app.get("/api/health")
 def api_health():
+    # host 與 lan 讓手機掃到這台時能顯示電腦名稱，也讓桌面版告訴使用者手機要連哪裡
     return jsonify(ok=True, app="小柯機器人 YouTube 下載工具", version="1.0.0",
-                   yt_dlp=yt_dlp.version.__version__, folder=str(DOWNLOAD_DIR))
+                   yt_dlp=yt_dlp.version.__version__, folder=str(DOWNLOAD_DIR),
+                   host=socket.gethostname(),
+                   lan=["http://%s:%d" % (ip, PORT) for ip in lan_ips()])
+
+
+APP_ID = "小柯機器人 YouTube 下載工具"
+DISCOVER_PORTS = (8787,)
+
+
+def probe(url, timeout=0.6):
+    """連得上而且確實是小柯後端，就回傳它的資訊。"""
+    import json as _json
+    import urllib.request
+    try:
+        with urllib.request.urlopen(url + "/api/health", timeout=timeout) as r:
+            d = _json.loads(r.read().decode("utf-8"))
+        if d.get("app") == APP_ID:
+            return {"url": url, "host": d.get("host") or "", "version": d.get("version") or ""}
+    except Exception:
+        pass
+    return None
+
+
+@app.get("/api/discover")
+def api_discover():
+    """掃描這台電腦所在的區域網路（/24），找出其他開著的小柯後端。"""
+    from concurrent.futures import ThreadPoolExecutor
+    mine = set(lan_ips())
+    ports = sorted(set(DISCOVER_PORTS) | {PORT})
+    targets = []
+    for ip in mine:
+        prefix = ip.rsplit(".", 1)[0]
+        for n in range(1, 255):
+            for port in ports:
+                targets.append("http://%s.%d:%d" % (prefix, n, port))
+    with ThreadPoolExecutor(max_workers=96) as pool:
+        found = [x for x in pool.map(probe, targets) if x]
+    for item in found:
+        item["self"] = item["url"].split("//")[1].rsplit(":", 1)[0] in mine and \
+            item["url"].endswith(":%d" % PORT)
+    found.sort(key=lambda x: (not x["self"], x["host"].lower()))
+    return jsonify(ok=True, found=found, scanned=len(targets))
+
+
+def lan_ips():
+    """這台電腦在區域網路上的 IPv4 位址。"""
+    usable = lambda ip: not ip.startswith(("127.", "169.254."))
+    # 對外連線用的那張網卡就是手機也在的那個 Wi-Fi（不會真的送出封包）。
+    # 只用它，因為 WSL、Hyper-V、VPN 的虛擬網卡手機根本連不到，列出來只會讓人困惑。
+    try:
+        s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        s.connect(("8.8.8.8", 80))
+        ip = s.getsockname()[0]
+        s.close()
+        if usable(ip):
+            return [ip]
+    except OSError:
+        pass
+    # 沒有對外網路（例如只有區網）才退回列出所有網卡
+    try:
+        ips = {info[4][0] for info in socket.getaddrinfo(socket.gethostname(), None, socket.AF_INET)}
+    except OSError:
+        ips = set()
+    return sorted(ip for ip in ips if usable(ip))
 
 
 # ---------------------------------------------------------------- 網頁

@@ -28,7 +28,19 @@
     }).then(readJson);
   }
 
-  function get(path) { return fetch(api(path)).then(readJson); }
+  // timeoutMs：連到不存在的位址時瀏覽器會卡很久，健康檢查要能早點放棄
+  function get(path, timeoutMs) {
+    if (!timeoutMs || !window.AbortController) return fetch(api(path)).then(readJson);
+    var ctrl = new AbortController();
+    var timer = setTimeout(function () { ctrl.abort(); }, timeoutMs);
+    return fetch(api(path), { signal: ctrl.signal }).then(function (r) {
+      clearTimeout(timer);
+      return readJson(r);
+    }, function (e) {
+      clearTimeout(timer);
+      throw new Error(e && e.name === "AbortError" ? "連線逾時" : (e && e.message) || "連不上");
+    });
+  }
 
   function readJson(r) {
     return r.json().catch(function () {
@@ -85,11 +97,146 @@
   function checkHealth() {
     apiBase = $("api-base").value.trim() || DEFAULT_BASE;
     say($("health"), "檢查中…", "busy");
-    get("/api/health").then(function (d) {
-      say($("health"), "已連線 · yt-dlp " + d.yt_dlp + " · 存到 " + d.folder, "ok");
+    get("/api/health", 3000).then(function (d) {
+      say($("health"), "已連線 " + (d.host ? d.host + " · " : "") +
+        "yt-dlp " + d.yt_dlp + " · 存到 " + d.folder, "ok");
+      showPhoneUrls(d);
       loadStt();
     }).catch(function (e) {
       say($("health"), "連不上後端：" + e.message, "err");
+    });
+  }
+
+  /* ---------------------------------------------------------- 自動尋找後端 */
+
+  var SAVED_KEY = "xk_yt_saved_bases";
+
+  function savedBases() {
+    try { return JSON.parse(localStorage.getItem(SAVED_KEY) || "[]"); } catch (e) { return []; }
+  }
+
+  function rememberBase(base) {
+    var list = savedBases().filter(function (x) { return x !== base; });
+    list.unshift(base);
+    try { localStorage.setItem(SAVED_KEY, JSON.stringify(list.slice(0, 8))); } catch (e) {}
+  }
+
+  function isLocal(base) { return /\/\/(127\.0\.0\.1|localhost)(:|\/|$)/.test(base); }
+
+  // 從「這個頁面」實際連連看：連得上才算數，連不上的就不列出來
+  function probe(base) {
+    base = base.replace(/\/+$/, "");
+    var ctrl = window.AbortController ? new AbortController() : null;
+    var timer = setTimeout(function () { if (ctrl) ctrl.abort(); }, 2500);
+    return fetch(base + "/api/health", ctrl ? { signal: ctrl.signal } : {})
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        clearTimeout(timer);
+        return d && d.app ? { url: base, host: d.host || "", lan: d.lan || [] } : null;
+      })
+      .catch(function () { clearTimeout(timer); return null; });
+  }
+
+  function uniq(list) {
+    return list.filter(function (x, i) { return x && list.indexOf(x) === i; });
+  }
+
+  function findBackends() {
+    $("btn-find").disabled = true;
+    say($("find-msg"), "尋找中…（約 5 秒）", "busy");
+    $("found-list").innerHTML = "";
+
+    var first = uniq([apiBase, DEFAULT_BASE, "http://localhost:8787"].concat(savedBases()));
+    Promise.all(first.map(probe)).then(function (res) {
+      var ok = res.filter(Boolean);
+      if (!ok.length) return ok;
+      // 請找到的第一台後端幫忙掃描它所在的區域網路，再從這個頁面逐一驗證
+      return fetch(ok[0].url + "/api/discover")
+        .then(function (r) { return r.json(); })
+        .then(function (d) {
+          var more = (d.found || []).map(function (x) { return x.url; })
+            .filter(function (u) { return first.indexOf(u) < 0; });
+          return Promise.all(more.map(probe));
+        })
+        .catch(function () { return []; })
+        .then(function (res2) { return ok.concat(res2.filter(Boolean)); });
+    }).then(function (all) {
+      // 同一台電腦可能用好幾個網址都連得到，只留一個（本機網址優先，線上版也連得到）
+      var seen = {};
+      var list = all.filter(function (x) {
+        var key = x.host || x.url;
+        if (seen[key]) return false;
+        seen[key] = true;
+        return true;
+      });
+      // 目前用的連不上、又找到能用的：直接幫使用者填好切過去
+      var auto = list.length && !list.some(function (x) { return x.url === apiBase; });
+      if (auto) {
+        useBase(list[0].url, list);
+      } else {
+        renderFound(list);
+      }
+      say($("find-msg"), list.length
+        ? (auto ? "已自動連上" + (list[0].host ? " " + list[0].host : "") : "找到 " + list.length + " 台") +
+          (list.length > 1 ? "，要換別台點一下即可" : "")
+        : "找不到可用的後端。請確認電腦上的小柯已經開啟" +
+          (location.protocol === "https:" ? "；線上版只找得到這台電腦上的後端" : ""),
+        list.length ? "ok" : "err");
+    }).then(function () {
+      $("btn-find").disabled = false;
+    });
+  }
+
+  function renderFound(list) {
+    var ul = $("found-list");
+    ul.innerHTML = "";
+    list.forEach(function (x) {
+      var li = document.createElement("li");
+      var b = document.createElement("button");
+      b.className = "found-item" + (x.url === apiBase ? " is-on" : "");
+      var icon = document.createElement("span");
+      icon.className = "found-icon"; icon.textContent = "💻";
+      var text = document.createElement("span");
+      text.className = "found-text";
+      var name = document.createElement("b");
+      name.textContent = (isLocal(x.url) ? "這台電腦" : "") +
+        (x.host ? (isLocal(x.url) ? "（" + x.host + "）" : x.host) : "");
+      if (!name.textContent) name.textContent = "小柯後端";
+      var url = document.createElement("small");
+      url.textContent = x.url;
+      text.appendChild(name); text.appendChild(url);
+      var tag = document.createElement("span");
+      tag.className = "found-tag";
+      tag.textContent = x.url === apiBase ? "使用中" : "";
+      b.appendChild(icon); b.appendChild(text); b.appendChild(tag);
+      b.addEventListener("click", function () { useBase(x.url, list); });
+      li.appendChild(b);
+      ul.appendChild(li);
+    });
+  }
+
+  function useBase(base, list) {
+    apiBase = base;
+    $("api-base").value = base;
+    try { localStorage.setItem(LS_KEY, base); } catch (e) {}
+    rememberBase(base);
+    if (list) renderFound(list);
+    checkHealth();
+  }
+
+  $("btn-find").addEventListener("click", findBackends);
+
+  // 這台電腦的後端：告訴使用者手機要連哪裡
+  function showPhoneUrls(d) {
+    var urls = d.lan || [];
+    var here = servedByBackend || isLocal(apiBase);
+    show("phone-box", here && urls.length > 0);
+    var ul = $("phone-urls");
+    ul.innerHTML = "";
+    urls.forEach(function (u) {
+      var li = document.createElement("li");
+      li.textContent = u;
+      ul.appendChild(li);
     });
   }
 
@@ -501,6 +648,9 @@
       apiBase = location.origin;
       $("api-base").value = apiBase;
       $("api-base").disabled = true;
+      // 頁面就是後端自己提供的（例如桌面版），不需要再找後端
+      show("find-box", false);
+      show("manual-box", false);
     }).catch(function () { /* 不是後端提供的，用設定的網址 */ });
   }
 
@@ -517,9 +667,10 @@
   }
 
   detectBase().then(function () {
-    return get("/api/health");
+    return get("/api/health", 3000);
   }).then(function (d) {
-    say($("health"), "已連線 · yt-dlp " + d.yt_dlp, "ok");
+    say($("health"), "已連線 " + (d.host ? d.host + " · " : "") + "yt-dlp " + d.yt_dlp, "ok");
+    showPhoneUrls(d);
     loadStt();
     var shared = urlFromQuery();
     if (shared) {
@@ -527,7 +678,9 @@
       doParse();
     }
   }).catch(function () {
+    // 連不上就直接打開設定並自動尋找，使用者不用懂網址怎麼填
     show("panel-settings", true);
-    say($("health"), "還沒連上後端，請確認後端已啟動或填入網址", "err");
+    say($("health"), "還沒連上後端，正在自動尋找…", "busy");
+    findBackends();
   });
 })();

@@ -15,7 +15,7 @@ from pathlib import Path
 IS_WINDOWS = os.name == "nt"
 IS_MAC = sys.platform == "darwin"
 
-APP_VERSION = "1.0.5"
+APP_VERSION = "1.0.6"
 APP_NAME = "小柯機器人 YouTube 下載工具"
 UPDATE_URL = "https://raw.githubusercontent.com/achir1015/xiaoke-youtube/main/version.json"
 RELEASE_PAGE = "https://github.com/achir1015/xiaoke-youtube/releases/latest"
@@ -42,11 +42,16 @@ def setup_ffmpeg():
     return None
 
 
+# 開放區域網路連線，手機才連得到；Windows 第一次會跳防火牆詢問，
+# 公用網路（咖啡廳等）預設會被防火牆擋住
+HOST = "0.0.0.0"
+
+
 def free_port(preferred=8787):
     for port in (preferred, 0):
         s = socket.socket()
         try:
-            s.bind(("127.0.0.1", port))
+            s.bind((HOST, port))
             return s.getsockname()[1]
         except OSError:
             continue
@@ -71,9 +76,9 @@ import webview  # noqa: E402
 def serve():
     try:
         from waitress import serve as wserve
-        wserve(backend.app, host="127.0.0.1", port=PORT, threads=16)
+        wserve(backend.app, host=HOST, port=PORT, threads=16)
     except ImportError:
-        backend.app.run(host="127.0.0.1", port=PORT, threaded=True)
+        backend.app.run(host=HOST, port=PORT, threaded=True)
 
 
 class Api:

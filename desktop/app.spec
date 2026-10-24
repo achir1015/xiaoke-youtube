@@ -11,6 +11,7 @@ from pathlib import Path
 from PyInstaller.utils.hooks import collect_all
 
 ROOT = Path(SPECPATH).parent          # noqa: F821  （SPECPATH 由 PyInstaller 提供）
+MAC_ICON = ROOT / "build" / "XiaokeYouTube.icns"
 
 datas = [
     (str(ROOT / "web"), "web"),
@@ -35,7 +36,13 @@ for pkg in ("yt_dlp", "faster_whisper", "ctranslate2", "opencc", "av", "tokenize
 # 如果專案裡放了 ffmpeg，就一起打包（CI 會先下載到 ffmpeg/）
 ffmpeg_dir = ROOT / "ffmpeg"
 if ffmpeg_dir.is_dir():
-    datas.append((str(ffmpeg_dir), "ffmpeg"))
+    if sys.platform == "darwin":
+        # macOS 的執行檔要放在 Frameworks 才會被簽章，放在 Resources 會讓整個 .app 簽章失效
+        for tool in ("ffmpeg", "ffprobe"):
+            if (ffmpeg_dir / tool).exists():
+                binaries.append((str(ffmpeg_dir / tool), "ffmpeg"))
+    else:
+        datas.append((str(ffmpeg_dir), "ffmpeg"))
 
 a = Analysis(
     [str(ROOT / "desktop" / "app.py")],
@@ -60,8 +67,10 @@ exe = EXE(
     strip=False,
     upx=False,
     console=False,
-    # Linux 不吃 .ico，視窗圖示改由程式啟動時指定
-    icon=str(ROOT / "web" / "favicon.ico") if sys.platform == "win32" else None,
+    # Windows 用 .ico、macOS 用 .icns（build-mac.sh 產生）；Linux 的視窗圖示由程式啟動時指定
+    icon=(str(ROOT / "web" / "favicon.ico") if sys.platform == "win32"
+          else str(MAC_ICON) if sys.platform == "darwin" and MAC_ICON.exists()
+          else None),
 )
 
 coll = COLLECT(
@@ -72,3 +81,25 @@ coll = COLLECT(
     upx=False,
     name="XiaokeYouTube",
 )
+
+if sys.platform == "darwin":
+    import json
+    version = json.loads((ROOT / "version.json").read_text(encoding="utf-8"))["version"]
+    app = BUNDLE(                                   # noqa: F821
+        coll,
+        name="小柯YT下載.app",
+        icon=str(MAC_ICON) if MAC_ICON.exists() else None,
+        bundle_identifier="com.achir.xiaokeyoutube",
+        version=version,
+        info_plist={
+            "CFBundleName": "小柯YT下載",
+            "CFBundleDisplayName": "小柯YT下載",
+            "CFBundleShortVersionString": version,
+            "CFBundleVersion": version,
+            "LSMinimumSystemVersion": "11.0",
+            "NSHighResolutionCapable": True,
+            # 視窗載入的是本機後端的 http 頁面，要允許區域網路的明文連線
+            "NSAppTransportSecurity": {"NSAllowsLocalNetworking": True},
+            "NSLocalNetworkUsageDescription": "讓同一個 Wi-Fi 裡的手機可以連到這台 Mac 下載影片。",
+        },
+    )

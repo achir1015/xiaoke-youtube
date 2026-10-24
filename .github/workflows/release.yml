@@ -100,6 +100,25 @@ jobs:
           tag_name: v${{ needs.windows.outputs.version }}
           files: dist/XiaokeYouTube-linux-x86_64-v${{ needs.windows.outputs.version }}.tar.gz
 
+  mac:
+    needs: windows          # 跟其他 job 丟同一個 tag，排在 Windows 建好 Release 之後
+    runs-on: macos-14       # Apple 晶片（arm64）
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: 建置 .dmg
+        run: bash desktop/build-mac.sh
+
+      - name: 發行 Release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v${{ needs.windows.outputs.version }}
+          files: dist/XiaokeYouTube-mac-arm64-v${{ needs.windows.outputs.version }}.dmg
+
   android:
     needs: [windows, linux]
     runs-on: ubuntu-latest
