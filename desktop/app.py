@@ -15,7 +15,7 @@ from pathlib import Path
 IS_WINDOWS = os.name == "nt"
 IS_MAC = sys.platform == "darwin"
 
-APP_VERSION = "1.0.6"
+APP_VERSION = "1.0.7"
 APP_NAME = "小柯機器人 YouTube 下載工具"
 UPDATE_URL = "https://raw.githubusercontent.com/achir1015/xiaoke-youtube/main/version.json"
 RELEASE_PAGE = "https://github.com/achir1015/xiaoke-youtube/releases/latest"

@@ -1,5 +1,5 @@
 {
-  "version": "1.0.6",
-  "notes": "新增 macOS 版（.dmg）；自動尋找後端並填入；桌面版開放區域網路讓手機連線",
+  "version": "1.0.7",
+  "notes": "新增 macOS 版（.dmg）；Android 改用固定正式簽章；自動尋找後端並填入",
   "page": "https://github.com/achir1015/xiaoke-youtube/releases/latest"
 }

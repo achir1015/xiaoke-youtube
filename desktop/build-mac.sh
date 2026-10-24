@@ -22,16 +22,24 @@ if [ ! -x ffmpeg/ffmpeg ]; then
   echo "[小柯] 下載 ffmpeg（靜態編譯版，不依賴 Homebrew）..."
   mkdir -p ffmpeg
   tmp="$(mktemp -d)"
+  # 「最新版」捷徑網址只對 ffmpeg.zip 有效（ffprobe 會 404），
+  # 所以先解析出 ffmpeg 實際所在的版本目錄，再從同一個目錄抓兩個，版本也一定一致
+  # 注意：這個網站對 HEAD 請求不穩定（常回 404），要用 GET 並只讀轉址目標、不跟過去
+  LOC="$(curl -fsS -o /dev/null -w '%{redirect_url}' \
+    "https://ffmpeg.martin-riedl.de/redirect/latest/macos/${ARCH}/release/ffmpeg.zip")"
+  [ -n "$LOC" ] || { echo "找不到 ffmpeg 最新版的下載位置"; exit 1; }
+  FF_DIR="${LOC%/ffmpeg.zip}"
+  echo "[小柯] ffmpeg 版本目錄：$FF_DIR"
   for tool in ffmpeg ffprobe; do
-    curl -fsSL -o "$tmp/$tool.zip" \
-      "https://ffmpeg.martin-riedl.de/redirect/latest/macos/${ARCH}/release/${tool}.zip"
+    curl -fsSL -o "$tmp/$tool.zip" "$FF_DIR/$tool.zip"
     unzip -o -q "$tmp/$tool.zip" -d "$tmp/$tool"
     find "$tmp/$tool" -type f -name "$tool" -exec cp {} ffmpeg/ \;
   done
   rm -rf "$tmp"
   chmod +x ffmpeg/ffmpeg ffmpeg/ffprobe
 fi
-./ffmpeg/ffmpeg -hide_banner -version | head -1
+# 用 sed 而不是 head：head 提早關管線會讓 ffmpeg 收到 SIGPIPE，在 pipefail 下整支腳本會中斷
+./ffmpeg/ffmpeg -hide_banner -version | sed -n 1p
 
 echo "[小柯] 產生 App 圖示..."
 rm -rf build/icon.iconset && mkdir -p build/icon.iconset
