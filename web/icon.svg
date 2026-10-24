@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <defs>
+    <linearGradient id="helm" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#8fa6bd"/>
+      <stop offset="1" stop-color="#5c7490"/>
+    </linearGradient>
+  </defs>
+  <!-- 天線 -->
+  <line x1="32" y1="3" x2="32" y2="10" stroke="#8fa6bd" stroke-width="2.5"/>
+  <circle cx="32" cy="3.5" r="3" fill="#38bdf8"/>
+  <!-- 頭盔外殼 -->
+  <rect x="8" y="10" width="48" height="40" rx="12" fill="url(#helm)"/>
+  <path d="M8 24a24 14 0 0 1 48 0z" fill="#a9bed2" opacity=".55"/>
+  <!-- 面罩 -->
+  <rect x="14" y="19" width="36" height="22" rx="9" fill="#101722"/>
+  <!-- 眼睛 -->
+  <circle cx="24" cy="30" r="3.6" fill="#38bdf8"/>
+  <circle cx="40" cy="30" r="3.6" fill="#38bdf8"/>
+  <!-- 耳機 -->
+  <rect x="3" y="24" width="6" height="14" rx="3" fill="#44586e"/>
+  <rect x="55" y="24" width="6" height="14" rx="3" fill="#44586e"/>
+  <!-- YouTube 播放徽章 -->
+  <rect x="32" y="40" width="28" height="20" rx="6" fill="#ff3b30"/>
+  <path d="M42.5 45.5v9l8-4.5z" fill="#fff"/>
+</svg>

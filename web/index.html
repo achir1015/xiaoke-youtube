@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>小柯機器人 YouTube 下載工具</title>
+<meta name="description" content="小柯機器人 YouTube 下載工具：MP4／MP3、可選解析度、支援播放清單、下載進度條。">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="icon" type="image/svg+xml" href="icon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="favicon-32.png">
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0d1117">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="小柯YT下載">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <img src="icon.svg" alt="" class="brand-icon">
+    <div>
+      <h1>小柯機器人 <span>YouTube 下載工具</span></h1>
+      <p class="tagline">MP4／MP3 · 自選解析度 · 支援播放清單</p>
+    </div>
+  </div>
+  <div class="top-actions">
+    <button id="btn-install" class="btn btn-mini" hidden title="把小柯放到桌面／主畫面">＋ 建立捷徑</button>
+    <button id="btn-settings" class="icon-btn" title="後端設定" aria-label="後端設定">⚙</button>
+  </div>
+</header>
+
+<main>
+  <section class="card" id="panel-settings" hidden>
+    <h2>後端服務</h2>
+    <p class="hint">YouTube 影片必須由後端（本機或自架伺服器）實際下載，網頁本身無法直接抓檔。</p>
+    <label class="field">
+      <span>後端網址</span>
+      <input type="text" id="api-base" placeholder="http://127.0.0.1:8787" spellcheck="false">
+    </label>
+    <div class="row">
+      <button id="btn-test" class="btn btn-ghost">測試連線</button>
+      <span id="health" class="status"></span>
+    </div>
+  </section>
+
+  <section class="card">
+    <label class="field">
+      <span>影片或播放清單網址</span>
+      <div class="url-row">
+        <input type="text" id="url" placeholder="https://www.youtube.com/watch?v=..." spellcheck="false" autocomplete="off">
+        <button id="btn-parse" class="btn btn-primary">解析</button>
+      </div>
+    </label>
+    <p id="parse-msg" class="status"></p>
+  </section>
+
+  <section class="card" id="panel-media" hidden>
+    <div class="media">
+      <img id="thumb" alt="" class="thumb">
+      <div class="media-meta">
+        <h2 id="media-title">—</h2>
+        <p id="media-sub" class="hint"></p>
+      </div>
+    </div>
+
+    <div class="opt-block">
+      <span class="opt-label">檔案格式</span>
+      <div class="seg" id="mode-group">
+        <button class="seg-btn is-on" data-mode="mp4">MP4 影片</button>
+        <button class="seg-btn" data-mode="mp3">MP3 音樂</button>
+      </div>
+    </div>
+
+    <div class="opt-block" id="quality-block">
+      <span class="opt-label">解析度</span>
+      <div class="seg wrap" id="quality-group"></div>
+    </div>
+
+    <div class="opt-block" id="playlist-block" hidden>
+      <div class="opt-head">
+        <span class="opt-label">播放清單項目（<span id="sel-count">0</span>/<span id="all-count">0</span>）</span>
+        <div class="mini-btns">
+          <button class="btn btn-mini" id="btn-all">全選</button>
+          <button class="btn btn-mini" id="btn-none">全不選</button>
+          <button class="btn btn-mini" id="btn-invert">反選</button>
+        </div>
+      </div>
+      <ul class="pl-list" id="pl-list"></ul>
+    </div>
+
+    <button id="btn-download" class="btn btn-primary btn-big">開始下載</button>
+  </section>
+
+  <section class="card" id="panel-progress" hidden>
+    <div class="prog-head">
+      <span id="prog-stage" class="stage">準備中</span>
+      <span id="prog-pct" class="pct">0%</span>
+    </div>
+    <div class="bar"><div class="bar-fill" id="bar-fill"></div></div>
+    <p id="prog-detail" class="hint"></p>
+    <div class="bar bar-sm" id="bar-item-wrap" hidden><div class="bar-fill alt" id="bar-item"></div></div>
+    <div class="row">
+      <button id="btn-cancel" class="btn btn-ghost">取消下載</button>
+    </div>
+  </section>
+
+  <section class="card" id="panel-done" hidden>
+    <h2 id="done-title">下載完成</h2>
+    <p class="hint" id="done-folder"></p>
+    <ul class="file-list" id="file-list"></ul>
+    <button id="btn-again" class="btn btn-ghost">再下載一個</button>
+  </section>
+</main>
+
+<footer>
+  <p>小柯機器人系列工具 · 由 yt-dlp + ffmpeg 驅動 · 請僅下載你有權取得的內容</p>
+</footer>
+
+<script src="app.js"></script>
+</body>
+</html>
