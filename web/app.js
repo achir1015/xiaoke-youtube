@@ -6,10 +6,10 @@
   var LS_KEY = "xk_yt_api_base";
   var DEFAULT_BASE = "http://127.0.0.1:8787";
 
-  // 由後端自己服務這個頁面時用同源，否則用上次設定／預設值
-  var servedByBackend = /^https?:$/.test(location.protocol) && location.port === "8787";
-  var apiBase = servedByBackend ? location.origin
-    : (localStorage.getItem(LS_KEY) || DEFAULT_BASE);
+  // 先假設用上次設定的網址；開頁時會探測這個頁面是不是後端自己提供的
+  // （桌面版在 8787 被佔用時會換埠，所以不能靠埠號判斷）
+  var servedByBackend = false;
+  var apiBase = localStorage.getItem(LS_KEY) || DEFAULT_BASE;
 
   var state = {
     info: null, mode: "mp4", quality: null, jobId: null, timer: null,
@@ -491,8 +491,22 @@
 
   window.addEventListener("appinstalled", function () { show("btn-install", false); });
 
-  /* 開頁先確認後端是否活著，沒活就把設定打開 */
-  get("/api/health").then(function (d) {
+  /* 開頁先探測這個頁面是不是後端自己提供的，再確認後端活著 */
+
+  function detectBase() {
+    if (!/^https?:$/.test(location.protocol)) return Promise.resolve();
+    return fetch(location.origin + "/api/health").then(function (r) {
+      if (!r.ok) return;
+      servedByBackend = true;
+      apiBase = location.origin;
+      $("api-base").value = apiBase;
+      $("api-base").disabled = true;
+    }).catch(function () { /* 不是後端提供的，用設定的網址 */ });
+  }
+
+  detectBase().then(function () {
+    return get("/api/health");
+  }).then(function (d) {
     say($("health"), "已連線 · yt-dlp " + d.yt_dlp, "ok");
     loadStt();
   }).catch(function () {
