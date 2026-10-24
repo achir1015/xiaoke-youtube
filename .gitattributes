@@ -1,0 +1,16 @@
+# 這些檔案要在 Linux／macOS 上執行，換行一定要是 LF，
+# 否則 bash 會噴 "\r: command not found"
+*.sh            text eol=lf
+*.desktop       text eol=lf
+install.sh      text eol=lf
+
+# 這些是 Windows 專用的，維持 CRLF
+*.bat           text eol=crlf
+*.ps1           text eol=crlf
+*.iss           text eol=crlf
+
+# 二進位檔不要做任何轉換
+*.png           binary
+*.ico           binary
+*.zip           binary
+*.exe           binary
