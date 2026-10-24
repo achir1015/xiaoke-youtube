@@ -6,12 +6,33 @@
 
 set -euo pipefail
 
-# 在 CI 上失敗時，把最後 20 行輸出寫成錯誤註記：註記不用登入就看得到，log 則要登入
+# 在 CI 上失敗時，把錯誤寫到不用登入就看得到的地方（log 要登入才能看）：
+#   1. ::error 註記（顯示在執行頁面上）
+#   2. 執行摘要（$GITHUB_STEP_SUMMARY，可放完整 40 行）
+# 兩者都直接寫到原始輸出（fd 3），不經過 tee——腳本一結束 GitHub 會把 tee 一起收掉，經過它的輸出會遺失
 if [ -n "${GITHUB_ACTIONS:-}" ]; then
   LOG="$(mktemp)"
+  exec 3>&1
   exec > >(tee "$LOG") 2>&1
-  trap 'rc=$?; sleep 1; msg="$(tail -n 20 "$LOG" | tr -d "\r" | sed -e "s/%/%25/g" | awk 1 ORS="%0A")";
-        echo "::error title=macOS 建置失敗（第 $LINENO 行：$BASH_COMMAND）::$msg"; exit $rc' ERR
+  on_err() {
+    local rc=$? line="$1" cmd="$2"
+    sleep 1
+    local msg
+    msg="$(tail -n 20 "$LOG" | tr -d '\r' | sed -e 's/%/%25/g' | awk 1 ORS='%0A')"
+    echo "::error title=macOS 建置失敗（第 ${line} 行）::指令：${cmd}%0A${msg}" >&3
+    if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+      { echo "### macOS 建置失敗（第 ${line} 行）"
+        echo ""
+        echo "指令：\`${cmd}\`"
+        echo ""
+        echo '```'
+        tail -n 40 "$LOG" | tr -d '\r'
+        echo '```'
+      } >> "$GITHUB_STEP_SUMMARY"
+    fi
+    exit "$rc"
+  }
+  trap 'on_err "$LINENO" "$BASH_COMMAND"' ERR
 fi
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
