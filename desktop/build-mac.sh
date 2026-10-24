@@ -10,29 +10,44 @@ set -euo pipefail
 #   1. ::error 註記（顯示在執行頁面上）
 #   2. 執行摘要（$GITHUB_STEP_SUMMARY，可放完整 40 行）
 # 兩者都直接寫到原始輸出（fd 3），不經過 tee——腳本一結束 GitHub 會把 tee 一起收掉，經過它的輸出會遺失
+# 用 EXIT 而不是只用 ERR：明寫的 exit 1 和 set -u（變數未定義）造成的中斷都不會觸發 ERR，
+# 但一定會觸發 EXIT。ERR 只負責記下最後失敗的那一行。
+STAGE_NAME="開始"
+FAIL_LINE="?"
+FAIL_CMD="?"
+stage() {
+  STAGE_NAME="$1"
+  echo "[小柯] $1"
+  if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then echo "- $1" >> "$GITHUB_STEP_SUMMARY"; fi
+}
 if [ -n "${GITHUB_ACTIONS:-}" ]; then
   LOG="$(mktemp)"
   exec 3>&1
   exec > >(tee "$LOG") 2>&1
-  on_err() {
-    local rc=$? line="$1" cmd="$2"
+  trap 'FAIL_LINE="$LINENO"; FAIL_CMD="$BASH_COMMAND"' ERR
+  on_exit() {
+    local rc=$?
+    [ "$rc" -eq 0 ] && return 0
     sleep 1
     local msg
     msg="$(tail -n 20 "$LOG" | tr -d '\r' | sed -e 's/%/%25/g' | awk 1 ORS='%0A')"
-    echo "::error title=macOS 建置失敗（第 ${line} 行）::指令：${cmd}%0A${msg}" >&3
+    echo "::error title=macOS 建置失敗：${STAGE_NAME}（第 ${FAIL_LINE} 行）::指令：${FAIL_CMD}%0A${msg}" >&3
     if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
-      { echo "### macOS 建置失敗（第 ${line} 行）"
+      { echo ""
+        echo "### ❌ 失敗於：${STAGE_NAME}（第 ${FAIL_LINE} 行，結束碼 ${rc}）"
         echo ""
-        echo "指令：\`${cmd}\`"
+        echo "指令：\`${FAIL_CMD}\`"
         echo ""
         echo '```'
         tail -n 40 "$LOG" | tr -d '\r'
         echo '```'
       } >> "$GITHUB_STEP_SUMMARY"
     fi
-    exit "$rc"
   }
-  trap 'on_err "$LINENO" "$BASH_COMMAND"' ERR
+  trap on_exit EXIT
+  if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+    { echo "### macOS 建置進度"; echo "bash ${BASH_VERSION}、$(sw_vers -productVersion 2>/dev/null || echo ?)"; } >> "$GITHUB_STEP_SUMMARY"
+  fi
 fi
 
 ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
@@ -41,14 +56,14 @@ cd "$ROOT"
 ARCH="$(uname -m)"     # Apple 晶片是 arm64，Intel 是 x86_64
 VERSION="$(python3 -c "import json;print(json.load(open('version.json',encoding='utf-8'))['version'])")"
 APP_NAME="小柯YT下載"
-echo "[小柯] 建置 macOS $ARCH 版本 $VERSION"
+stage "建置 macOS $ARCH 版本 $VERSION"
 
-echo "[小柯] 安裝相依套件..."
+stage "安裝相依套件"
 python3 -m pip install --quiet --disable-pip-version-check \
   -r server/requirements.txt -r server/requirements-stt.txt pyinstaller pywebview
 
 if [ ! -x ffmpeg/ffmpeg ]; then
-  echo "[小柯] 下載 ffmpeg（靜態編譯版，不依賴 Homebrew）..."
+  stage "下載 ffmpeg"
   mkdir -p ffmpeg
   tmp="$(mktemp -d)"
   # 「最新版」捷徑網址只對 ffmpeg.zip 有效（ffprobe 會 404），
@@ -56,7 +71,7 @@ if [ ! -x ffmpeg/ffmpeg ]; then
   # 注意：這個網站對 HEAD 請求不穩定（常回 404），要用 GET 並只讀轉址目標、不跟過去
   LOC="$(curl -fsS -o /dev/null -w '%{redirect_url}' \
     "https://ffmpeg.martin-riedl.de/redirect/latest/macos/${ARCH}/release/ffmpeg.zip")"
-  [ -n "$LOC" ] || { echo "找不到 ffmpeg 最新版的下載位置"; exit 1; }
+  [ -n "$LOC" ] || { echo "找不到 ffmpeg 最新版的下載位置（下載站回應：$(curl -s -o /dev/null -w '%{http_code}' "https://ffmpeg.martin-riedl.de/redirect/latest/macos/${ARCH}/release/ffmpeg.zip")）"; exit 1; }
   FF_DIR="${LOC%/ffmpeg.zip}"
   echo "[小柯] ffmpeg 版本目錄：$FF_DIR"
   for tool in ffmpeg ffprobe; do
@@ -70,7 +85,7 @@ fi
 # 用 sed 而不是 head：head 提早關管線會讓 ffmpeg 收到 SIGPIPE，在 pipefail 下整支腳本會中斷
 ./ffmpeg/ffmpeg -hide_banner -version | sed -n 1p
 
-echo "[小柯] 產生 App 圖示..."
+stage "產生 App 圖示"
 rm -rf build/icon.iconset && mkdir -p build/icon.iconset
 for s in 16 32 128 256 512; do
   sips -z "$s" "$s" web/icon-512.png --out "build/icon.iconset/icon_${s}x${s}.png" > /dev/null
@@ -79,18 +94,19 @@ for s in 16 32 128 256 512; do
 done
 iconutil -c icns build/icon.iconset -o build/XiaokeYouTube.icns
 
-echo "[小柯] 打包中..."
+stage "PyInstaller 打包"
 rm -rf "dist/$APP_NAME.app" dist/XiaokeYouTube
 python3 -m PyInstaller desktop/app.spec --noconfirm --distpath dist --workpath build/pyi
 [ -d "dist/$APP_NAME.app" ] || { echo "打包失敗：找不到 $APP_NAME.app"; exit 1; }
 
 # 沒有 Apple 開發者帳號，只能做「臨時簽章」（ad-hoc）。
 # Apple 晶片上沒簽章的程式完全不能執行，臨時簽章至少能讓使用者在「隱私權與安全性」按「仍要打開」。
+stage "臨時簽章"
 codesign --force --deep --sign - "dist/$APP_NAME.app"
 codesign --verify --deep --strict "dist/$APP_NAME.app"
 echo "[小柯] 簽章檢查通過"
 
-echo "[小柯] 製作 dmg..."
+stage "製作 dmg"
 STAGE="build/dmg"
 rm -rf "$STAGE" && mkdir -p "$STAGE"
 cp -R "dist/$APP_NAME.app" "$STAGE/"
@@ -99,4 +115,4 @@ DMG="dist/XiaokeYouTube-mac-${ARCH}-v${VERSION}.dmg"
 rm -f "$DMG"
 hdiutil create -volname "$APP_NAME" -srcfolder "$STAGE" -ov -format UDZO "$DMG" > /dev/null
 
-echo "[小柯] 完成：$DMG（$(du -h "$DMG" | cut -f1)）"
+stage "完成：$DMG（$(du -h "$DMG" | cut -f1)）"
