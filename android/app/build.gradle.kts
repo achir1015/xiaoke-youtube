@@ -19,11 +19,11 @@ val keystorePath: String? = System.getenv("XK_KEYSTORE")
     ?.takeIf { it.isNotBlank() && file(it).isFile }
 
 android {
-    namespace = "com.xiaoke.youtube"
+    namespace = "com.achir.xiaokeyoutube"
     compileSdk = 35
 
     defaultConfig {
-        applicationId = "com.xiaoke.youtube"
+        applicationId = "com.achir.xiaokeyoutube"
         minSdk = 24
         targetSdk = 35
         versionCode = versionNumber
