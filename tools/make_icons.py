@@ -11,6 +11,7 @@ from PIL import Image, ImageDraw
 ROOT = Path(__file__).resolve().parent.parent
 WEB = ROOT / "web"
 EXT_ICONS = ROOT / "extension" / "icons"
+ANDROID_RES = ROOT / "android" / "app" / "src" / "main" / "res"
 S = 1024  # 先畫大圖再縮，邊緣才漂亮
 
 
@@ -86,7 +87,23 @@ def main():
     for size in (16, 32, 48, 128):
         base.resize((size, size), Image.LANCZOS).save(EXT_ICONS / ("icon-%d.png" % size))
 
-    print("圖示已輸出到", WEB, "與", EXT_ICONS)
+    # Android：傳統方形圖示 + 自適應圖示的前景層
+    densities = [("mdpi", 48), ("hdpi", 72), ("xhdpi", 96),
+                 ("xxhdpi", 144), ("xxxhdpi", 192)]
+    for name, size in densities:
+        folder = ANDROID_RES / ("mipmap-" + name)
+        folder.mkdir(parents=True, exist_ok=True)
+        icon = base.resize((size, size), Image.LANCZOS)
+        icon.save(folder / "ic_launcher.png")
+        icon.save(folder / "ic_launcher_round.png")
+
+    # 自適應圖示的前景要留安全邊距，不然圓形遮罩會把機器人切到
+    fg = draw_icon(pad_ratio=0.18)
+    fg_dir = ANDROID_RES / "drawable"
+    fg_dir.mkdir(parents=True, exist_ok=True)
+    fg.resize((432, 432), Image.LANCZOS).save(fg_dir / "ic_launcher_foreground.png")
+
+    print("圖示已輸出到", WEB, "、", EXT_ICONS, "與", ANDROID_RES)
 
 
 if __name__ == "__main__":

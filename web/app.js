@@ -504,11 +504,28 @@
     }).catch(function () { /* 不是後端提供的，用設定的網址 */ });
   }
 
+  function urlFromQuery() {
+    try {
+      var q = new URLSearchParams(location.search).get("url");
+      if (!q) return null;
+      // 手機分享過來的文字常常夾帶標題，只取裡面的網址
+      var m = q.match(/https?:\/\/\S+/);
+      return (m ? m[0] : q).trim();
+    } catch (e) {
+      return null;
+    }
+  }
+
   detectBase().then(function () {
     return get("/api/health");
   }).then(function (d) {
     say($("health"), "已連線 · yt-dlp " + d.yt_dlp, "ok");
     loadStt();
+    var shared = urlFromQuery();
+    if (shared) {
+      $("url").value = shared;
+      doParse();
+    }
   }).catch(function () {
     show("panel-settings", true);
     say($("health"), "還沒連上後端，請確認後端已啟動或填入網址", "err");

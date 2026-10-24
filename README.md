@@ -4,8 +4,8 @@ MP4／MP3、自選解析度、支援播放清單、附下載進度條的 YouTube
 由 [yt-dlp](https://github.com/yt-dlp/yt-dlp) + ffmpeg 驅動。
 
 > 目前完成：**線上版（網頁介面 + 本機／自架後端）**、**YouTube 常駐下載小圖示（瀏覽器擴充功能）**、
-> **Windows 11 桌面版**、**Linux 桌面版**
-> 規劃中：macOS 桌面版，Android、iPhone。
+> **Windows 11 桌面版**、**Linux 桌面版**、**Android 版**
+> 規劃中：macOS 桌面版、iPhone。
 
 ## 功能
 
@@ -83,6 +83,7 @@ server/stt.py           語音轉文字 → SRT（faster-whisper + OpenCC 繁簡
 web/                    網頁介面（可單獨部署為靜態網站）
 extension/              YouTube 常駐下載小圖示（Chrome／Edge 擴充功能）
 desktop/                桌面版（pywebview + PyInstaller；Windows 用 Inno Setup，Linux 出 tar.gz）
+android/                Android 版（Kotlin + WebView，可接收 YouTube App 的分享）
 tools/make_icons.py     產生 favicon／捷徑圖示／擴充功能圖示
 version.json            發行版本號（改這裡並推上 main 就會自動發 Release）
 啟動小柯YouTube下載工具.bat  Windows 一鍵啟動（不打包的輕量用法）
@@ -103,6 +104,12 @@ version.json            發行版本號（改這裡並推上 main 就會自動�
   或自己執行 `pip install -r server/requirements-stt.txt`
 
 > 辨識在 CPU 上跑，速度大約是影片長度的三分之一到一倍（看模型大小與機器）。
+
+## Android 版
+
+`android/` 是一個 Kotlin App：**從 YouTube App 按「分享」就能選小柯**，網址自動帶入並解析。
+手機當介面、下載交給你的後端（電腦或 NAS），所以手機不耗電也不佔空間；需要時再按
+「存到這台裝置」把檔案拉回手機。安裝與設定見 [android/README.md](android/README.md)。
 
 ## 桌面版（Windows 11／Linux）
 

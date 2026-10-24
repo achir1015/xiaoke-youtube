@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">小柯YT下載</string>
+    <string name="setup_title">後端服務設定</string>
+    <string name="setup_hint">YouTube 影片要由後端實際下載，請填入你電腦或 NAS 上的小柯後端網址。</string>
+    <string name="setup_label">後端網址</string>
+    <string name="setup_test">測試連線</string>
+    <string name="setup_save">儲存並開啟</string>
+    <string name="setup_empty">請先填入後端網址</string>
+    <string name="setup_testing">連線中…</string>
+    <string name="settings">後端設定</string>
+    <string name="load_failed">連不上後端，請確認後端已啟動、手機與電腦在同一個網路。</string>
+    <string name="retry">重試</string>
+    <string name="reconfigure">重新設定</string>
+    <string name="download_started">開始下載到手機…</string>
+</resources>
