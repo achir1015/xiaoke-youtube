@@ -60,7 +60,10 @@ powershell -ExecutionPolicy Bypass -File desktop\build.ps1
 
 - `dist\XiaokeYouTube\XiaokeYouTube.exe`（免安裝版，約 290 MB；含 ffmpeg 約 490 MB，
   安裝檔會壓縮過所以下載小很多）
-- `dist\XiaokeYouTube-Setup-v<版本>.exe`（安裝檔，會建立開始功能表與桌面捷徑）
+- `dist\XiaokeYouTube-Setup-v<版本>.exe`（安裝檔，約 134 MB，會建立開始功能表與桌面捷徑）
+
+安裝檔預設裝在使用者自己的資料夾，**不會跳出系統管理員權限要求**；
+需要安裝給這台電腦的所有使用者時，可在安裝精靈裡選擇。
 
 ## 桌面版多了什麼
 

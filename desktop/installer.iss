@@ -30,7 +30,9 @@ SolidCompression=yes
 WizardStyle=modern
 ArchitecturesInstallIn64BitMode=x64compatible
 ArchitecturesAllowed=x64compatible
-PrivilegesRequiredOverridesAllowed=dialog
+; 預設裝在使用者自己的資料夾，不跳 UAC；需要時仍可選擇安裝給所有使用者
+PrivilegesRequired=lowest
+PrivilegesRequiredOverridesAllowed=dialog commandline
 
 [Languages]
 Name: "default"; MessagesFile: "compiler:Default.isl"

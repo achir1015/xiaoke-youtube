@@ -43,10 +43,16 @@ python -m PyInstaller desktop\app.spec --noconfirm --distpath dist --workpath bu
 if (-not (Test-Path "$root\dist\XiaokeYouTube\XiaokeYouTube.exe")) { throw "打包失敗" }
 
 if ($WithInstaller) {
+  # Inno Setup 可能裝在系統層級，也可能是使用者層級（winget 預設就是後者）
   $iscc = @(
     "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe",
-    "$env:ProgramFiles\Inno Setup 6\ISCC.exe"
+    "$env:ProgramFiles\Inno Setup 6\ISCC.exe",
+    "$env:LOCALAPPDATA\Programs\Inno Setup 6\ISCC.exe"
   ) | Where-Object { Test-Path $_ } | Select-Object -First 1
+  if (-not $iscc) {
+    $cmd = Get-Command ISCC.exe -ErrorAction SilentlyContinue
+    if ($cmd) { $iscc = $cmd.Source }
+  }
   if (-not $iscc) { throw "找不到 Inno Setup 6（ISCC.exe），請先安裝： winget install JRSoftware.InnoSetup" }
   Write-Host "[小柯] 產生安裝檔..."
   & $iscc "/DMyAppVersion=$version" "$root\desktop\installer.iss"
