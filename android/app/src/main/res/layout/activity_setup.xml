@@ -28,53 +28,109 @@
             android:textSize="19sp"
             android:textStyle="bold" />
 
+        <!-- 自動尋找：一般使用者只會看到這一區 -->
         <TextView
+            android:id="@+id/find_status"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="18dp"
-            android:text="@string/setup_hint"
-            android:textColor="@color/xk_muted"
-            android:textSize="13sp" />
-
-        <TextView
-            android:layout_width="wrap_content"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="20dp"
-            android:text="@string/setup_label"
-            android:textColor="@color/xk_muted"
-            android:textSize="12sp" />
-
-        <EditText
-            android:id="@+id/input_base"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:autofillHints=""
-            android:hint="http://192.168.1.10:8787"
-            android:inputType="textUri"
+            android:layout_marginTop="26dp"
+            android:gravity="center"
+            android:text="@string/find_searching"
             android:textColor="@color/xk_text"
-            android:textColorHint="@color/xk_muted"
-            android:textSize="15sp" />
+            android:textSize="16sp" />
 
-        <Button
-            android:id="@+id/btn_test"
-            android:layout_width="wrap_content"
+        <ProgressBar
+            android:id="@+id/find_progress"
+            style="?android:attr/progressBarStyleHorizontal"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:indeterminate="true" />
+
+        <TextView
+            android:id="@+id/find_hint"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="12dp"
+            android:textColor="@color/xk_muted"
+            android:textSize="13sp"
+            android:visibility="gone" />
+
+        <LinearLayout
+            android:id="@+id/found_list"
+            android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="14dp"
-            android:text="@string/setup_test" />
+            android:orientation="vertical" />
 
-        <TextView
-            android:id="@+id/status"
+        <Button
+            android:id="@+id/btn_rescan"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:layout_marginTop="10dp"
+            android:text="@string/find_again"
+            android:visibility="gone" />
+
+        <!-- 進階：手動輸入，平常收起來 -->
+        <TextView
+            android:id="@+id/btn_manual"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginTop="28dp"
+            android:padding="8dp"
+            android:text="@string/manual_toggle"
             android:textColor="@color/xk_muted"
             android:textSize="13sp" />
 
-        <Button
-            android:id="@+id/btn_save"
+        <LinearLayout
+            android:id="@+id/manual_box"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginTop="22dp"
-            android:text="@string/setup_save" />
+            android:orientation="vertical"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:text="@string/setup_hint"
+                android:textColor="@color/xk_muted"
+                android:textSize="13sp" />
+
+            <EditText
+                android:id="@+id/input_base"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:autofillHints=""
+                android:hint="http://192.168.1.10:8787"
+                android:inputType="textUri"
+                android:textColor="@color/xk_text"
+                android:textColorHint="@color/xk_muted"
+                android:textSize="15sp" />
+
+            <Button
+                android:id="@+id/btn_test"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="10dp"
+                android:text="@string/setup_test" />
+
+            <TextView
+                android:id="@+id/status"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="8dp"
+                android:textColor="@color/xk_muted"
+                android:textSize="13sp" />
+
+            <Button
+                android:id="@+id/btn_save"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="14dp"
+                android:text="@string/setup_save" />
+        </LinearLayout>
     </LinearLayout>
 </ScrollView>

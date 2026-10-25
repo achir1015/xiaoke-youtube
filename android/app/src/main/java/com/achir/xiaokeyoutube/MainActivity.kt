@@ -41,8 +41,8 @@ class MainActivity : AppCompatActivity() {
 
         setupWebView()
 
-        findViewById<Button>(R.id.btn_settings).setOnClickListener { openSetup() }
-        findViewById<Button>(R.id.btn_reconfigure).setOnClickListener { openSetup() }
+        findViewById<Button>(R.id.btn_settings).setOnClickListener { openSetup(pick = true) }
+        findViewById<Button>(R.id.btn_reconfigure).setOnClickListener { openSetup(pick = true) }
         findViewById<Button>(R.id.btn_retry).setOnClickListener { load(intent) }
 
         onBackPressedDispatcher.addCallback(this, object : OnBackPressedCallback(true) {
@@ -78,9 +78,7 @@ class MainActivity : AppCompatActivity() {
                 view: WebView?, request: WebResourceRequest?, error: WebResourceError?
             ) {
                 // 只有主頁面載不起來才算連不上，子資源失敗不用打擾使用者
-                if (request?.isForMainFrame == true) {
-                    errorBox.visibility = View.VISIBLE
-                }
+                if (request?.isForMainFrame == true) handleLost()
             }
         }
 
@@ -112,7 +110,15 @@ class MainActivity : AppCompatActivity() {
         } else {
             "$base/"
         }
-        web.loadUrl(target)
+        // 先確認那台電腦還在再載入。網址錯或連不到時，WebView 常常只是一片空白、
+        // 也不回報錯誤，使用者會卡住；先確認的話最多 2.5 秒就能自動去重新尋找。
+        Thread {
+            val alive = Discovery.probe(base, 2500) != null
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                if (alive) web.loadUrl(target) else openSetup(lost = true, shared = shared)
+            }
+        }.start()
     }
 
     /** 從分享或開啟連結的 Intent 取出 YouTube 網址。 */
@@ -128,8 +134,28 @@ class MainActivity : AppCompatActivity() {
         return (match?.value ?: text).trim().ifEmpty { null }
     }
 
-    private fun openSetup() {
-        startActivity(Intent(this, SetupActivity::class.java))
+    /**
+     * 主頁面載不起來時：先確認電腦是不是真的不見了（例如換了 IP、電腦關了），
+     * 是的話就自動去重新尋找；電腦還在只是頁面一時失敗，才顯示「重試」。
+     * 先確認再跳，才不會在兩個畫面之間來回跳。
+     */
+    private fun handleLost() {
+        val base = Prefs.base(this) ?: return openSetup()
+        Thread {
+            val alive = Discovery.probe(base, 2500) != null
+            runOnUiThread {
+                if (isFinishing || isDestroyed) return@runOnUiThread
+                if (alive) errorBox.visibility = View.VISIBLE else openSetup(lost = true)
+            }
+        }.start()
+    }
+
+    private fun openSetup(lost: Boolean = false, pick: Boolean = false, shared: String? = null) {
+        startActivity(Intent(this, SetupActivity::class.java)
+            .putExtra(SetupActivity.EXTRA_LOST, lost)
+            .putExtra(SetupActivity.EXTRA_PICK, pick)
+            // 從 YouTube 分享過來時，換完電腦還要接著處理那支影片
+            .putExtra(SetupActivity.EXTRA_SHARED, shared ?: sharedUrl(intent)))
         finish()
     }
 

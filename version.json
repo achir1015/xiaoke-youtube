@@ -1,5 +1,5 @@
 {
-  "version": "1.1.1",
-  "notes": "修正 macOS／Linux 版產生字幕或翻譯時 App 閃退並重新開啟；新增執行記錄方便查錯",
+  "version": "1.1.2",
+  "notes": "Android 版打開就自動尋找家裡的電腦並連上，不用再手動填網址",
   "page": "https://github.com/achir1015/xiaoke-youtube/releases/latest"
 }

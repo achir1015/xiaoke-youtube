@@ -8,9 +8,19 @@
     <string name="setup_save">儲存並開啟</string>
     <string name="setup_empty">請先填入後端網址</string>
     <string name="setup_testing">連線中…</string>
-    <string name="settings">後端設定</string>
-    <string name="load_failed">連不上後端，請確認後端已啟動、手機與電腦在同一個網路。</string>
+    <string name="settings">換一台電腦</string>
+    <string name="load_failed">電腦有回應，但頁面暫時載入失敗。</string>
     <string name="retry">重試</string>
-    <string name="reconfigure">重新設定</string>
+    <string name="reconfigure">選擇電腦</string>
     <string name="download_started">開始下載到手機…</string>
+    <string name="find_searching">正在尋找家裡開著小柯的電腦…</string>
+    <string name="find_lost">原本的電腦連不上了，正在重新尋找…</string>
+    <string name="find_one">找到了：%1$s，正在連線…</string>
+    <string name="find_many">找到 %1$d 台電腦，請選一台：</string>
+    <string name="find_none">沒有找到開著小柯的電腦</string>
+    <string name="find_none_hint">請確認：\n1. 電腦上的「小柯YT下載」已經打開\n2. 手機和電腦連的是同一個 Wi-Fi\n3. 電腦第一次開啟時，若詢問是否允許網路連線，請選「允許」</string>
+    <string name="find_no_wifi">手機目前沒有連上 Wi-Fi</string>
+    <string name="find_no_wifi_hint">小柯要透過家裡的 Wi-Fi 找到電腦，請先連上 Wi-Fi 再按「重新尋找」。</string>
+    <string name="find_again">重新尋找</string>
+    <string name="manual_toggle">進階：手動輸入網址</string>
 </resources>
