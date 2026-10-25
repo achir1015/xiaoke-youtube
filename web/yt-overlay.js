@@ -1,12 +1,14 @@
 /*
  * 小柯機器人 - YouTube 影片上的「下載這個視訊」浮動標籤
  *
- * 注入到內建的 YouTube 瀏覽視窗裡（桌面版 pywebview、Android WebView 共用這一份）。
+ * 注入到內建的 YouTube 瀏覽視窗裡（桌面版 pywebview、Android WebView 共用這一份），
+ * Chrome／Edge 擴充功能也用同一份（extension/yt-overlay.js 是複製過去的，CI 會檢查兩份一致）。
  * 跟主程式溝通一律透過 window.__xkCall(method, args) → Promise，由各平台自己提供：
  *   info  {url}                 → 影片資訊與可用畫質
  *   start {url, mode, quality…} → 開始下載，回傳 job_id
  *   poll  {id}                  → 下載進度
  *   finish{id}                  → 完成後的動作（桌面版開資料夾、Android 存到手機）
+ * poll 完成時可帶 finish_label（點這裡要做什麼）或 done_text（整句完成文字）
  */
 (function () {
   "use strict";
@@ -105,11 +107,12 @@
       : "https://www.youtube.com/watch?v=" + id;
   }
 
-  // 主播放器：畫面上最大、看得見的那個 <video>
+  // 主播放器：畫面上最大、看得見的那個 <video>。
+  // 以外框（.html5-video-player）定位：還沒開始播時 <video> 本身的位置常常是歪的
   function playerRect() {
     var best = null, area = 0;
     document.querySelectorAll("video").forEach(function (v) {
-      var r = v.getBoundingClientRect();
+      var r = (v.closest(".html5-video-player") || v).getBoundingClientRect();
       var a = Math.max(0, r.width) * Math.max(0, r.height);
       if (a > area && r.width > 160 && r.height > 90 && r.bottom > 0 && r.top < innerHeight) {
         best = r; area = a;
@@ -211,7 +214,7 @@
       if (j.status === "done") {
         clearInterval(S.timer);
         S.job.done = true;
-        setLabel("✓ 完成，點這裡" + (d.finish_label || "開啟"), 100);
+        setLabel(d.done_text || ("✓ 完成，點這裡" + (d.finish_label || "開啟")), 100);
       } else if (j.status === "error" || j.status === "canceled") {
         fail(j.error || "已取消");
       } else {

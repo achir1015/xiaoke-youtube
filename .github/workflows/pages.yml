@@ -5,7 +5,7 @@ name: 發布線上版網頁
 on:
   push:
     branches: [main]
-    paths: ["web/**", ".github/workflows/pages.yml"]
+    paths: ["web/**", "extension/yt-overlay.js", ".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -25,6 +25,8 @@ jobs:
       url: ${{ steps.deploy.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+      - name: 檢查擴充功能的下載標籤跟網頁版是同一份
+        run: cmp web/yt-overlay.js extension/yt-overlay.js || { echo "::error::extension/yt-overlay.js 跟 web/yt-overlay.js 不一致，請把 web 的那份複製過去"; exit 1; }
       - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v3
         with:

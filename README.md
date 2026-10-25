@@ -252,11 +252,13 @@ M2M100（日文仍有缺字、韓文會誤譯），MADLAD 的譯文最自然、�
 - 影片頁是 https，不能直接連本機 http 的小柯，所以一律透過程式本身的橋接轉送
   （桌面版 pywebview js_api、Android `addJavascriptInterface`）
 - 內建視窗沒辦法登入 Google 帳號，會員限定、需要登入的影片無法下載
+- 線上版是普通網頁，沒辦法在別的分頁的 YouTube 上加按鈕；用一般 Chrome／Edge 的人請裝擴充功能（見下一節）
 
 ## YouTube 常駐下載小圖示（進階：Chrome 擴充功能）
 
-`extension/` 是一個 Manifest V3 擴充功能：在 YouTube 影片頁與播放清單頁右下角常駐一個
-小柯機器人圖示，點開可以選格式、解析度、下載範圍，並**分派到你設定的任一下載平台**
+`extension/` 是一個 Manifest V3 擴充功能：在一般的 Chrome／Edge 裡看 YouTube 時，
+影片右上角同樣有「▶ 下載這個視訊」（跟桌面版共用 `web/yt-overlay.js`），
+另外右下角常駐一個小柯機器人圖示，點開可以選格式、解析度、下載範圍，並**分派到你設定的任一下載平台**
 （這台電腦、NAS、工作電腦……）。安裝與使用方式見 [extension/README.md](extension/README.md)。
 
 ## 注意

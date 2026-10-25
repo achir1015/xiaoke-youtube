@@ -1,11 +1,20 @@
 {
   "manifest_version": 3,
   "name": "小柯機器人 YouTube 下載小圖示",
-  "version": "1.0.0",
-  "description": "在 YouTube 頁面常駐一個小柯機器人下載圖示，一鍵把影片或播放清單分派到你指定的下載平台。",
-  "permissions": ["storage", "notifications"],
-  "host_permissions": ["http://*/*", "https://*/*"],
-  "background": { "service_worker": "background.js" },
+  "version": "1.1.0",
+  "description": "在 YouTube 影片右上角加上「下載這個視訊」，一鍵選畫質下載；也可以把影片或播放清單分派到你指定的下載平台。",
+  "permissions": [
+    "storage",
+    "notifications",
+    "downloads"
+  ],
+  "host_permissions": [
+    "http://*/*",
+    "https://*/*"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
   "content_scripts": [
     {
       "matches": [
@@ -13,7 +22,11 @@
         "https://m.youtube.com/*",
         "https://music.youtube.com/*"
       ],
-      "js": ["content.js"],
+      "js": [
+        "overlay-glue.js",
+        "yt-overlay.js",
+        "content.js"
+      ],
       "run_at": "document_idle"
     }
   ],
@@ -35,8 +48,13 @@
   },
   "web_accessible_resources": [
     {
-      "resources": ["icons/icon-128.png", "icons/icon-48.png"],
-      "matches": ["https://*.youtube.com/*"]
+      "resources": [
+        "icons/icon-128.png",
+        "icons/icon-48.png"
+      ],
+      "matches": [
+        "https://*.youtube.com/*"
+      ]
     }
   ]
 }

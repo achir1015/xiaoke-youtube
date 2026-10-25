@@ -45,6 +45,15 @@ var HANDLERS = {
   start: function (m) { return call(m.base, "/api/jobs", m.body); },
   poll: function (m) { return call(m.base, "/api/jobs/" + m.jobId); },
   cancel: function (m) { return call(m.base, "/api/jobs/" + m.jobId + "/cancel", {}); },
+  // 平台在別台機器（NAS 等）時，把下載好的檔案拉回這台電腦的「下載」資料夾
+  save: async function (m) {
+    var d = await call(m.base, "/api/jobs/" + m.jobId);
+    var files = (d.job && d.job.files) || [];
+    files.forEach(function (f) {
+      chrome.downloads.download({ url: trim(m.base) + f.url, filename: f.name, conflictAction: "uniquify" });
+    });
+    return { count: files.length };
+  },
   settings: function () { return getSettings(); },
   openSettings: function () {
     chrome.tabs.create({ url: chrome.runtime.getURL("popup.html") });
