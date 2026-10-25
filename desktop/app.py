@@ -25,6 +25,7 @@ import faulthandler  # noqa: E402
 import socket  # noqa: E402
 import subprocess  # noqa: E402
 import threading  # noqa: E402
+import urllib.error  # noqa: E402
 import urllib.request  # noqa: E402
 from pathlib import Path  # noqa: E402
 
@@ -74,7 +75,7 @@ try:
 except ImportError:
     pass
 
-APP_VERSION = "1.1.2"
+APP_VERSION = "1.2.0"
 APP_NAME = "小柯機器人 YouTube 下載工具"
 UPDATE_URL = "https://raw.githubusercontent.com/achir1015/xiaoke-youtube/main/version.json"
 RELEASE_PAGE = "https://github.com/achir1015/xiaoke-youtube/releases/latest"
@@ -191,6 +192,111 @@ class Api:
         import webbrowser
         webbrowser.open(RELEASE_PAGE)
         return {"ok": True}
+
+    def open_youtube(self):
+        open_youtube_window()
+        return {"ok": True}
+
+
+# ---------------------------------------------------------------- 內建 YouTube 視窗
+
+def backend_call(path, body=None, timeout=60):
+    """在程式這一側呼叫本機後端：YouTube 是 https 頁面，從網頁直接連本機 http 會被擋，
+    所以影片上的下載標籤都透過這裡轉送。"""
+    url = "http://127.0.0.1:%d%s" % (PORT, path)
+    data = None
+    headers = {}
+    if body is not None:
+        data = json.dumps(body).encode("utf-8")
+        headers["Content-Type"] = "application/json"
+    req = urllib.request.Request(url, data=data, headers=headers)
+    try:
+        with urllib.request.urlopen(req, timeout=timeout) as r:
+            return json.loads(r.read().decode("utf-8"))
+    except urllib.error.HTTPError as e:
+        try:
+            return json.loads(e.read().decode("utf-8"))
+        except Exception:
+            return {"ok": False, "error": "HTTP %d" % e.code}
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+
+class YouTubeApi:
+    """給 YouTube 視窗裡「下載這個視訊」標籤用的橋接，對應 web/yt-overlay.js 的 __xkCall。"""
+
+    def info(self, args):
+        return backend_call("/api/info", {"url": args.get("url")}, timeout=90)
+
+    def start(self, args):
+        return backend_call("/api/jobs", args)
+
+    def poll(self, args):
+        d = backend_call("/api/jobs/%s" % args.get("id"))
+        if d.get("ok"):
+            d["finish_label"] = "開啟資料夾"
+        return d
+
+    def finish(self, args):
+        return Api().open_folder()
+
+
+# 注入在 overlay 前面：把 __xkCall 接到 pywebview 的 js_api
+_BRIDGE_JS = """
+window.__xkCall = function (m, a) {
+  return new Promise(function (resolve, reject) {
+    function go() { window.pywebview.api[m](a).then(resolve, reject); }
+    if (window.pywebview && window.pywebview.api && window.pywebview.api[m]) go();
+    else window.addEventListener('pywebviewready', go, { once: true });
+  });
+};
+"""
+
+_yt_window = None
+
+
+def open_youtube_window():
+    global _yt_window
+    if _yt_window is not None:
+        try:
+            _yt_window.show()
+            _yt_window.restore()
+            return
+        except Exception:
+            _yt_window = None
+
+    overlay = (BASE / "web" / "yt-overlay.js").read_text(encoding="utf-8")
+    win = webview.create_window(
+        "YouTube — 小柯機器人（影片右上角有「下載這個視訊」）",
+        "https://www.youtube.com/",
+        width=1280, height=860, min_size=(480, 400),
+        js_api=YouTubeApi(),
+    )
+
+    def inject():
+        # YouTube 偶爾會先跳去 Google 做「背景登入檢查」（網址帶 passive=true），
+        # 在內嵌視窗裡有時會卡在那一頁，一般人會以為非登入不可——直接帶回 YouTube。
+        # 使用者自己按「登入」的頁面沒有 passive=true，不會被干涉。
+        try:
+            url = win.get_current_url() or ""
+            if "accounts.google.com" in url and "passive=true" in url:
+                win.load_url("https://www.youtube.com/")
+                return
+        except Exception:
+            pass
+        # 每次整頁載入都重新注入；YouTube 站內換影片不會整頁載入，由 overlay 自己追蹤
+        try:
+            win.evaluate_js(_BRIDGE_JS + overlay)
+        except Exception as e:
+            print("注入下載標籤失敗：", e, flush=True)
+
+    def closed():
+        global _yt_window
+        _yt_window = None
+
+    win.events.loaded += inject
+    win.events.closed += closed
+    _yt_window = win
 
 
 def is_newer(latest, current):

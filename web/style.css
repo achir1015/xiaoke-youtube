@@ -80,6 +80,10 @@ input[type=text]:focus { outline: none; border-color: var(--accent-2); }
 .btn-ghost { background: transparent; color: var(--text); border-color: var(--line); }
 .btn-ghost:hover { border-color: var(--accent-2); }
 .btn-big { width: 100%; padding: 14px; font-size: 1rem; margin-top: 6px; }
+#yt-box { border-top: 1px solid var(--line); margin-top: 14px; padding-top: 14px; }
+.btn-yt { width: 100%; padding: 13px; font-size: .98rem; background: #0f172a; color: #fff;
+          border: 1px solid #334155; }
+.btn-yt:hover { border-color: var(--accent); }
 .btn-mini { padding: 5px 10px; font-size: .74rem; background: var(--bg-soft); color: var(--muted); border-color: var(--line); }
 .btn-mini:hover { color: var(--text); border-color: var(--accent-2); }
 

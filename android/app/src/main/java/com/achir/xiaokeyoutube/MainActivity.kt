@@ -69,6 +69,15 @@ class MainActivity : AppCompatActivity() {
             allowContentAccess = false
         }
 
+        // 讓小柯的網頁可以打開 App 內建的 YouTube（網頁上的「瀏覽 YouTube」按鈕）。
+        // 這個 WebView 只會載入家裡電腦上的小柯頁面。
+        web.addJavascriptInterface(object {
+            @android.webkit.JavascriptInterface
+            fun openYouTube() {
+                runOnUiThread { startActivity(Intent(this@MainActivity, YouTubeActivity::class.java)) }
+            }
+        }, "XiaokeApp")
+
         web.webViewClient = object : WebViewClient() {
             override fun onPageStarted(view: WebView?, url: String?, favicon: android.graphics.Bitmap?) {
                 errorBox.visibility = View.GONE

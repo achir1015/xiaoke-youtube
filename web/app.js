@@ -629,6 +629,27 @@
     });
   });
 
+  /* ---------------------------------------------------------- 內建 YouTube 瀏覽 */
+
+  // 桌面版（pywebview）與 Android App 才有，一般瀏覽器開不了內建視窗就不顯示
+  function youtubeOpener() {
+    var api = deskApi();
+    if (api && api.open_youtube) return function () { api.open_youtube(); };
+    if (window.XiaokeApp && window.XiaokeApp.openYouTube) {
+      return function () { window.XiaokeApp.openYouTube(); };
+    }
+    return null;
+  }
+
+  function setupYouTube() {
+    var open = youtubeOpener();
+    show("yt-box", !!open);
+    if (open) $("btn-youtube").onclick = open;
+  }
+
+  window.addEventListener("pywebviewready", setupYouTube);
+  setupYouTube();
+
   window.addEventListener("pywebviewready", setupDesktop);
   if (deskApi()) setupDesktop();
 
