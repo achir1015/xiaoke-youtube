@@ -1,5 +1,5 @@
 {
-  "version": "1.2.0",
-  "notes": "新增內建 YouTube 瀏覽：影片右上角「下載這個視訊」，點一下選畫質就下載，不用安裝外掛",
+  "version": "1.2.1",
+  "notes": "影片右上角「下載這個視訊」標籤改貼著播放器框，影片還沒開始播時不會跑到頁面最上面；Chrome／Edge 擴充功能也有這個標籤了",
   "page": "https://github.com/achir1015/xiaoke-youtube/releases/latest"
 }

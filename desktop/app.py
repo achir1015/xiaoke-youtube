@@ -75,7 +75,7 @@ try:
 except ImportError:
     pass
 
-APP_VERSION = "1.2.0"
+APP_VERSION = "1.2.1"
 APP_NAME = "小柯機器人 YouTube 下載工具"
 UPDATE_URL = "https://raw.githubusercontent.com/achir1015/xiaoke-youtube/main/version.json"
 RELEASE_PAGE = "https://github.com/achir1015/xiaoke-youtube/releases/latest"
