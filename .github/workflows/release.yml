@@ -61,11 +61,20 @@ jobs:
           Compress-Archive -Path dist\XiaokeYouTube\* `
             -DestinationPath "dist\XiaokeYouTube-portable-v${{ steps.ver.outputs.version }}.zip"
 
+      - name: 產生 Release 說明（給一般使用者看：新功能＋該下載哪個檔案）
+        shell: pwsh
+        run: |
+          $j = Get-Content version.json -Raw -Encoding UTF8 | ConvertFrom-Json
+          $body = (Get-Content .githubelease-body.md -Raw -Encoding UTF8).
+            Replace('{{NOTES}}', $j.notes).Replace('{{VERSION}}', $j.version)
+          [IO.File]::WriteAllText("$env:RUNNER_TEMPelease-body.md", $body, [Text.UTF8Encoding]::new($false))
+
       - name: 發行 Release
         uses: softprops/action-gh-release@v2
         with:
           tag_name: v${{ steps.ver.outputs.version }}
           name: 小柯機器人 YouTube 下載工具 v${{ steps.ver.outputs.version }}
+          body_path: ${{ runner.temp }}/release-body.md
           generate_release_notes: true
           files: |
             dist/XiaokeYouTube-Setup-v${{ steps.ver.outputs.version }}.exe
